@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPU性能检测工具 - SM3+SM4基准测试</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --accent-color: #e74c3c;
+            --dark-color: #2c3e50;
+            --light-color: #ecf0f1;
+            --gray-color: #95a5a6;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: var(--light-color);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(44, 62, 80, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: var(--light-color);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: var(--gray-color);
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .card {
+            background: rgba(52, 73, 94, 0.7);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: var(--secondary-color);
+            display: flex;
+            align-items: center;
+        }
+        
+        .card-title i {
+            margin-right: 10px;
+        }
+        
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        label {
+            font-weight: 500;
+            color: var(--gray-color);
+        }
+        
+        select, input {
+            padding: 12px;
+            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(44, 62, 80, 0.8);
+            color: var(--light-color);
+            font-size: 1rem;
+        }
+        
+        button {
+            padding: 15px;
+            border: none;
+            border-radius: 5px;
+            background: var(--primary-color);
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:disabled {
+            background: var(--gray-color);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .result-area {
+            text-align: center;
+        }
+        
+        .score {
+            font-size: 4rem;
+            font-weight: 700;
+            color: var(--secondary-color);
+            margin: 20px 0;
+            text-shadow: 0 0 10px rgba(46, 204, 113, 0.5);
+        }
+        
+        .performance-label {
+            font-size: 1.2rem;
+            padding: 8px 15px;
+            border-radius: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+        
+        .progress-container {
+            width: 100%;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: var(--primary-color);
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        .details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .detail-card {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .detail-value {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--secondary-color);
+            margin: 5px 0;
+        }
+        
+        .detail-label {
+            font-size: 0.9rem;
+            color: var(--gray-color);
+        }
+        
+        .history {
+            margin-top: 30px;
+        }
+        
+        .history-title {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: var(--secondary-color);
+        }
+        
+        .history-list {
+            list-style: none;
+        }
+        
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 15px;
+            background: rgba(0, 0, 0, 0.2);
+            margin-bottom: 10px;
+            border-radius: 5px;
+            align-items: center;
+        }
+        
+        .history-score {
+            font-weight: 600;
+            color: var(--secondary-color);
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--gray-color);
+            font-size: 0.9rem;
+        }
+        
+        .info-text {
+            margin-top: 15px;
+            line-height: 1.6;
+            color: var(--gray-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CPU性能检测工具</h1>
+            <p class="subtitle">通过测试SM3哈希算法和SM4加密算法每秒钟运行的次数来评估您的CPU性能</p>
+        </header>
+        
+        <div class="dashboard">
+            <div class="card">
+                <h2 class="card-title">测试控制面板</h2>
+                <div class="control-panel">
+                    <div class="input-group">
+                        <label for="testDuration">测试时长 (秒)</label>
+                        <select id="testDuration">
+                            <option value="5">5秒</option>
+                            <option value="10" selected>10秒</option>
+                            <option value="15">15秒</option>
+                            <option value="30">30秒</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="testIntensity">测试强度</label>
+                        <select id="testIntensity">
+                            <option value="low">低</option>
+                            <option value="medium" selected>中</option>
+                            <option value="high">高</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="dataSize">数据块大小</label>
+                        <select id="dataSize">
+                            <option value="64">64字节</option>
+                            <option value="128" selected>128字节</option>
+                            <option value="256">256字节</option>
+                            <option value="512">512字节</option>
+                        </select>
+                    </div>
+                    
+                    <button id="startTest">开始性能测试</button>
+                    <button id="stopTest" disabled>停止测试</button>
+                </div>
+                
+                <div class="info-text">
+                    <p>测试期间，请不要进行其他CPU密集型操作，以获得准确结果。</p>
+                    <p>测试时间越长，结果越准确，但会消耗更多CPU资源。</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2 class="card-title">测试结果</h2>
+                <div class="result-area">
+                    <div class="performance-label">等待测试...</div>
+                    <div class="score">--</div>
+                    
+                    <div class="progress-container">
+                        <div class="progress-bar" id="testProgress"></div>
+                    </div>
+                    
+                    <div class="details">
+                        <div class="detail-card">
+                            <div class="detail-label">SM3 操作/秒</div>
+                            <div class="detail-value" id="sm3Score">--</div>
+                        </div>
+                        <div class="detail-card">
+                            <div class="detail-label">SM4 操作/秒</div>
+                            <div class="detail-value" id="sm4Score">--</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card history">
+            <h2 class="card-title">测试历史记录</h2>
+            <ul class="history-list" id="historyList">
+                <li class="history-item">暂无历史记录</li>
+            </ul>
+        </div>
+        
+        <footer>
+            <p>© 2023 CPU性能检测工具 | 基于SM3和SM4算法</p>
+            <p>注意：此测试工具仅用于评估CPU性能，测试结果受浏览器、系统负载和其他因素影响</p>
+        </footer>
+    </div>
+
+    <script>
+        // SM3和SM4算法实现（简化版，用于演示）
+        // 实际应用中应使用完整且经过验证的算法实现
+        
+        // SM3哈希算法实现
+        class SM3 {
+            constructor() {
+                this.IV = [
+                    0x7380166f, 0x4914b2b9, 0x172442d7, 0xda8a0600,
+                    0xa96f30bc, 0x163138aa, 0xe38dee4d, 0xb0fb0e4e
+                ];
+                this.T = new Array(64);
+                for (let i = 0; i < 16; i++) {
+                    this.T[i] = 0x79cc4519;
+                }
+                for (let i = 16; i < 64; i++) {
+                    this.T[i] = 0x7a879d8a;
+                }
+            }
+            
+            // 循环左移
+            rotl(x, n) {
+                return (x << n) | (x >>> (32 - n));
+            }
+            
+            // 布尔函数
+            ff(x, y, z, j) {
+                if (j < 16) {
+                    return x ^ y ^ z;
+                } else {
+                    return (x & y) | (x & z) | (y & z);
+                }
+            }
+            
+            // 布尔函数
+            gg(x, y, z, j) {
+                if (j < 16) {
+                    return x ^ y ^ z;
+                } else {
+                    return (x & y) | (~x & z);
+                }
+            }
+            
+            // 置换函数
+            p0(x) {
+                return x ^ this.rotl(x, 9) ^ this.rotl(x, 17);
+            }
+            
+            // 置换函数
+            p1(x) {
+                return x ^ this.rotl(x, 15) ^ this.rotl(x, 23);
+            }
+            
+            // 消息扩展
+            expand(B) {
+                const W = new Array(68);
+                const W1 = new Array(64);
+                
+                for (let i = 0; i < 16; i++) {
+                    W[i] = B[i];
+                }
+                
+                for (let i = 16; i < 68; i++) {
+                    W[i] = this.p1(W[i-16] ^ W[i-9] ^ this.rotl(W[i-3], 15)) ^ this.rotl(W[i-13], 7) ^ W[i-6];
+                }
+                
+                for (let i = 0; i < 64; i++) {
+                    W1[i] = W[i] ^ W[i+4];
+                }
+                
+                return [W, W1];
+            }
+            
+            // 压缩函数
+            cf(V, B) {
+                const [W, W1] = this.expand(B);
+                let [A, B1, C, D, E, F, G, H] = V;
+                
+                for (let j = 0; j < 64; j++) {
+                    const SS1 = this.rotl(this.rotl(A, 12) + E + this.rotl(this.T[j], j), 7);
+                    const SS2 = SS1 ^ this.rotl(A, 12);
+                    const TT1 = this.ff(A, B1, C, j) + D + SS2 + W1[j];
+                    const TT2 = this.gg(E, F, G, j) + H + SS1 + W[j];
+                    D = C;
+                    C = this.rotl(B1, 9);
+                    B1 = A;
+                    A = TT1;
+                    H = G;
+                    G = this.rotl(F, 19);
+                    F = E;
+                    E = this.p0(TT2);
+                }
+                
+                return [
+                    A ^ V[0], B1 ^ V[1], C ^ V[2], D ^ V[3],
+                    E ^ V[4], F ^ V[5], G ^ V[6], H ^ V[7]
+                ];
+            }
+            
+            // 计算哈希
+            hash(msg) {
+                // 简化实现，仅用于演示
+                // 实际应用中需要完整的消息填充和分组处理
+                let hash = this.IV.slice();
+                
+                // 模拟处理消息块
+                for (let i = 0; i < 16; i++) {
+                    hash = this.cf(hash, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+                }
+                
+                return hash;
+            }
+        }
+        
+        // SM4加密算法实现
+        class SM4 {
+            constructor() {
+                this.Sbox = [
+                    0xd6, 0x90, 0xe9, 0xfe, 0xcc, 0xe1, 0x3d, 0xb7, 0x16, 0xb6, 0x14, 0xc2, 0x28, 0xfb, 0x2c, 0x05,
+                    0x2b, 0x67, 0x9a, 0x76, 0x2a, 0xbe, 0x04, 0xc3, 0xaa, 0x44, 0x13, 0x26, 0x49, 0x86, 0x06, 0x99,
+                    0x9c, 0x42, 0x50, 0xf4, 0x91, 0xef, 0x98, 0x7a, 0x33, 0x54, 0x0b, 0x43, 0xed, 0xcf, 0xac, 0x62,
+                    0xe4, 0xb3, 0x1c, 0xa9, 0xc9, 0x08, 0xe8, 0x95, 0x80, 0xdf, 0x94, 0xfa, 0x75, 0x8f, 0x3f, 0xa6,
+                    0x47, 0x07, 0xa7, 0xfc, 0xf3, 0x73, 0x17, 0xba, 0x83, 0x59, 0x3c, 0x19, 0xe6, 0x85, 0x4f, 0xa8,
+                    0x68, 0x6b, 0x81, 0xb2, 0x71, 0x64, 0xda, 0x8b, 0xf8, 0xeb, 0x0f, 0x4b, 0x70, 0x56, 0x9d, 0x35,
+                    0x1e, 0x24, 0x0e, 0x5e, 0x63, 0x58, 0xd1, 0xa2, 0x25, 0x22, 0x7c, 0x3b, 0x01, 0x21, 0x78, 0x87,
+                    0xd4, 0x00, 0x46, 0x57, 0x9f, 0xd3, 0x27, 0x52, 0x4c, 0x36, 0x02, 0xe7, 0xa0, 0xc4, 0xc8, 0x9e,
+                    0xea, 0xbf, 0x8a, 0xd2, 0x40, 0xc7, 0x38, 0xb5, 0xa3, 0xf7, 0xf2, 0xce, 0xf9, 0x61, 0x15, 0xa1,
+                    0xe0, 0xae, 0x5d, 0xa4, 0x9b, 0x34, 0x1a, 0x55, 0xad, 0x93, 0x32, 0x30, 0xf5, 0x8c, 0xb1, 0xe3,
+                    0x1d, 0xf6, 0xe2, 0x2e, 0x82, 0x66, 0xca, 0x60, 0xc0, 0x29, 0x23, 0xab, 0x0d, 0x53, 0x4e, 0x6f,
+                    0xd5, 0xdb, 0x37, 0x45, 0xde, 0xfd, 0x8e, 0x2f, 0x03, 0xff, 0x6a, 0x72, 0x6d, 0x6c, 0x5b, 0x51,
+                    0x8d, 0x1b, 0xaf, 0x12, 0x22, 0x91, 0x07, 0x36, 0x6d, 0xcf, 0xdf, 0x10, 0x4e, 0x97, 0x7a, 0xe6,
+                    0xfd, 0x99, 0x9c, 0xa5, 0x3f, 0xa1, 0x41, 0x8c, 0x4d, 0x8e, 0x04, 0x5d, 0xa8, 0x73, 0x3a, 0xf4,
+                    0x2b, 0x58, 0x47, 0xcc, 0xb7, 0xd8, 0xfc, 0x19, 0x76, 0x81, 0xbf, 0x00, 0xe7, 0x9b, 0x8a, 0xd2,
+                    0x40, 0xc7, 0x38, 0xb5, 0xa3, 0xf7, 0xf2, 0xce, 0xf9, 0x61, 0x15, 0xa1, 0xe0, 0xae, 0x5d, 0xa4
+                ];
+                
+                this.FK = [
+                    0xa3b1bac6, 0x56aa3350, 0x677d9197, 0xb27022dc
+                ];
+                
+                this.CK = [
+                    0x00070e15, 0x1c232a31, 0x383f464d, 0x545b6269,
+                    0x70777e85, 0x8c939aa1, 0xa8afb6bd, 0xc4cbd2d9,
+                    0xe0e7eef5, 0xfc030a11, 0x181f262d, 0x343b4249,
+                    0x50575e65, 0x6c737a81, 0x888f969d, 0xa4abb2b9,
+                    0xc0c7ced5, 0xdce3eaf1, 0xf8ff060d, 0x141b2229,
+                    0x30373e45, 0x4c535a61, 0x686f767d, 0x848b9299,
+                    0xa0a7aeb5, 0xbcc3cad1, 0xd8dfe6ed, 0xf4fb0209,
+                    0x10171e25, 0x2c333a41, 0x484f565d, 0x646b7279
+                ];
+            }
+            
+            // 循环左移
+            rotl(x, n) {
+                return (x << n) | (x >>> (32 - n));
+            }
+            
+            // 非线性变换τ
+            tau(a) {
+                return (this.Sbox[(a >> 24) & 0xff] << 24) |
+                       (this.Sbox[(a >> 16) & 0xff] << 16) |
+                       (this.Sbox[(a >> 8) & 0xff] << 8) |
+                       (this.Sbox[a & 0xff]);
+            }
+            
+            // 线性变换L
+            l(b) {
+                return b ^ this.rotl(b, 2) ^ this.rotl(b, 10) ^ this.rotl(b, 18) ^ this.rotl(b, 24);
+            }
+            
+            // 线性变换L'
+            l1(b) {
+                return b ^ this.rotl(b, 13) ^ this.rotl(b, 23);
+            }
+            
+            // 轮函数F
+            f(x0, x1, x2, x3, rk) {
+                return x0 ^ this.l(this.tau(x1 ^ x2 ^ x3 ^ rk));
+            }
+            
+            // 生成轮密钥
+            keySchedule(key) {
+                const K = new Array(36);
+                const RK = new Array(32);
+                
+                K[0] = key[0] ^ this.FK[0];
+                K[1] = key[1] ^ this.FK[1];
+                K[2] = key[2] ^ this.FK[2];
+                K[3] = key[3] ^ this.FK[3];
+                
+                for (let i = 0; i < 32; i++) {
+                    K[i+4] = K[i] ^ this.l1(this.tau(K[i+1] ^ K[i+2] ^ K[i+3] ^ this.CK[i]));
+                    RK[i] = K[i+4];
+                }
+                
+                return RK;
+            }
+            
+            // 加密一组数据
+            encryptBlock(input, rk) {
+                let [x0, x1, x2, x3] = input;
+                
+                for (let i = 0; i < 32; i++) {
+                    const tmp = this.f(x0, x1, x2, x3, rk[i]);
+                    x0 = x1;
+                    x1 = x2;
+                    x2 = x3;
+                    x3 = tmp;
+                }
+                
+                return [x3, x2, x1, x0];
+            }
+            
+            // 加密（简化版）
+            encrypt(msg, key) {
+                // 简化实现，仅用于演示
+                const rk = this.keySchedule([0x01234567, 0x89abcdef, 0xfedcba98, 0x76543210]);
+                return this.encryptBlock([0x01234567, 0x89abcdef, 0xfedcba98, 0x76543210], rk);
+            }
+        }
+        
+        // 性能测试器
+        class PerformanceTester {
+            constructor() {
+                this.sm3 = new SM3();
+                this.sm4 = new SM4();
+                this.isTesting = false;
+                this.startTime = 0;
+                this.sm3Count = 0;
+                this.sm4Count = 0;
+                this.testDuration = 10;
+                this.testIntensity = 'medium';
+                this.dataSize = 128;
+                this.animationFrame = null;
+            }
+            
+            // 生成测试数据
+            generateTestData(size) {
+                const data = new Uint8Array(size);
+                for (let i = 0; i < size; i++) {
+                    data[i] = Math.floor(Math.random() * 256);
+                }
+                return data;
+            }
+            
+            // 执行SM3测试
+            runSM3Test() {
+                const data = this.generateTestData(this.dataSize);
+                this.sm3.hash(data);
+                this.sm3Count++;
+            }
+            
+            // 执行SM4测试
+            runSM4Test() {
+                const data = this.generateTestData(16); // SM4使用16字节数据块
+                const key = this.generateTestData(16); // SM4使用16字节密钥
+                this.sm4.encrypt(data, key);
+                this.sm4Count++;
+            }
+            
+            // 开始测试
+            startTest(duration, intensity, dataSize, onProgress, onComplete) {
+                this.isTesting = true;
+                this.startTime = performance.now();
+                this.sm3Count = 0;
+                this.sm4Count = 0;
+                this.testDuration = duration;
+                this.testIntensity = intensity;
+                this.dataSize = dataSize;
+                
+                // 根据测试强度设置每次帧更新运行的操作次数
+                let operationsPerFrame;
+                switch(intensity) {
+                    case 'low':
+                        operationsPerFrame = 10;
+                        break;
+                    case 'high':
+                        operationsPerFrame = 1000;
+                        break;
+                    case 'medium':
+                    default:
+                        operationsPerFrame = 100;
+                }
+                
+                const testLoop = () => {
+                    if (!this.isTesting) return;
+                    
+                    const elapsed = (performance.now() - this.startTime) / 1000;
+                    
+                    if (elapsed >= duration) {
+                        this.isTesting = false;
+                        onComplete({
+                            sm3Score: this.sm3Count / duration,
+                            sm4Score: this.sm4Count / duration,
+                            totalScore: (this.sm3Count + this.sm4Count) / duration
+                        });
+                        return;
+                    }
+                    
+                    // 执行测试操作
+                    for (let i = 0; i < operationsPerFrame; i++) {
+                        this.runSM3Test();
+                        this.runSM4Test();
+                    }
+                    
+                    // 报告进度
+                    onProgress(elapsed / duration);
+                    
+                    // 请求下一帧
+                    this.animationFrame = requestAnimationFrame(testLoop);
+                };
+                
+                // 启动测试循环
+                this.animationFrame = requestAnimationFrame(testLoop);
+            }
+            
+            // 停止测试
+            stopTest() {
+                this.isTesting = false;
+                if (this.animationFrame) {
+                    cancelAnimationFrame(this.animationFrame);
+                    this.animationFrame = null;
+                }
+            }
+        }
+        
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', function() {
+            const tester = new PerformanceTester();
+            const startButton = document.getElementById('startTest');
+            const stopButton = document.getElementById('stopTest');
+            const testDuration = document.getElementById('testDuration');
+            const testIntensity = document.getElementById('testIntensity');
+            const dataSize = document.getElementById('dataSize');
+            const progressBar = document.getElementById('testProgress');
+            const scoreElement = document.querySelector('.score');
+            const performanceLabel = document.querySelector('.performance-label');
+            const sm3ScoreElement = document.getElementById('sm3Score');
+            const sm4ScoreElement = document.getElementById('sm4Score');
+            const historyList = document.getElementById('historyList');
+            
+            // 从本地存储加载历史记录
+            let testHistory = JSON.parse(localStorage.getItem('cpuTestHistory')) || [];
+            updateHistoryList();
+            
+            // 开始测试按钮点击事件
+            startButton.addEventListener('click', function() {
+                const duration = parseInt(testDuration.value);
+                const intensity = testIntensity.value;
+                const size = parseInt(dataSize.value);
+                
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                progressBar.style.width = '0%';
+                scoreElement.textContent = '--';
+                sm3ScoreElement.textContent = '--';
+                sm4ScoreElement.textContent = '--';
+                performanceLabel.textContent = '测试中...';
+                performanceLabel.style.backgroundColor = '#3498db';
+                
+                tester.startTest(
+                    duration,
+                    intensity,
+                    size,
+                    function(progress) {
+                        progressBar.style.width = `${progress * 100}%`;
+                    },
+                    function(results) {
+                        startButton.disabled = false;
+                        stopButton.disabled = true;
+                        
+                        // 更新UI显示结果
+                        const totalScore = Math.round(results.totalScore);
+                        scoreElement.textContent = totalScore.toLocaleString();
+                        sm3ScoreElement.textContent = Math.round(results.sm3Score).toLocaleString();
+                        sm4ScoreElement.textContent = Math.round(results.sm4Score).toLocaleString();
+                        
+                        // 根据分数设置性能标签
+                        if (totalScore < 1000) {
+                            performanceLabel.textContent = '较低性能';
+                            performanceLabel.style.backgroundColor = '#e74c3c';
+                        } else if (totalScore < 5000) {
+                            performanceLabel.textContent = '中等性能';
+                            performanceLabel.style.backgroundColor = '#f39c12';
+                        } else if (totalScore < 10000) {
+                            performanceLabel.textContent = '良好性能';
+                            performanceLabel.style.backgroundColor = '#3498db';
+                        } else {
+                            performanceLabel.textContent = '高性能';
+                            performanceLabel.style.backgroundColor = '#2ecc71';
+                        }
+                        
+                        // 保存到历史记录
+                        const testResult = {
+                            date: new Date().toLocaleString(),
+                            score: totalScore,
+                            sm3Score: Math.round(results.sm3Score),
+                            sm4Score: Math.round(results.sm4Score),
+                            duration: duration,
+                            intensity: intensity,
+                            dataSize: size
+                        };
+                        
+                        testHistory.unshift(testResult);
+                        if (testHistory.length > 10) {
+                            testHistory = testHistory.slice(0, 10);
+                        }
+                        
+                        localStorage.setItem('cpuTestHistory', JSON.stringify(testHistory));
+                        updateHistoryList();
+                    }
+                );
+            });
+            
+            // 停止测试按钮点击事件
+            stopButton.addEventListener('click', function() {
+                tester.stopTest();
+                startButton.disabled = false;
+                stopButton.disabled = true;
+                performanceLabel.textContent = '测试已停止';
+                performanceLabel.style.backgroundColor = '#95a5a6';
+            });
+            
+            // 更新历史记录列表
+            function updateHistoryList() {
+                if (testHistory.length === 0) {
+                    historyList.innerHTML = '<li class="history-item">暂无历史记录</li>';
+                    return;
+                }
+                
+                historyList.innerHTML = '';
+                testHistory.forEach(result => {
+                    const item = document.createElement('li');
+                    item.className = 'history-item';
+                    item.innerHTML = `
+                        <div>
+                            <div>${result.date}</div>
+                            <div>时长: ${result.duration}秒 | 强度: ${result.intensity} | 数据: ${result.dataSize}字节</div>
+                        </div>
+                        <div class="history-score">${result.score.toLocaleString()}</div>
+                    `;
+                    historyList.appendChild(item);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
