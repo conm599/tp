@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>超强计算器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .container {
+            position: relative;
+            z-index: 10;
+        }
+        
+        .calculator {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            padding: 30px;
+            width: 350px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s;
+        }
+        
+        .calculator-title {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+            font-weight: 600;
+            font-size: 1.5rem;
+        }
+        
+        .display {
+            width: 100%;
+            height: 70px;
+            margin-bottom: 25px;
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 2rem;
+            text-align: right;
+            background-color: #f9f9f9;
+            font-family: 'Courier New', monospace;
+            color: #333;
+            box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+        }
+        
+        .display.error {
+            border-color: #ff6b6b;
+            background-color: #ffeaea;
+            color: #ff0000;
+            animation: pulse 0.5s infinite alternate;
+        }
+        
+        @keyframes pulse {
+            from { box-shadow: 0 0 5px #ff0000; }
+            to { box-shadow: 0 0 20px #ff0000; }
+        }
+        
+        .keys {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(5, 65px);
+            gap: 12px;
+        }
+        
+        button {
+            border: none;
+            border-radius: 8px;
+            font-size: 1.3rem;
+            background-color: #f0f0f0;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            font-weight: 600;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .number-btn {
+            background-color: #ffffff;
+            color: #333;
+        }
+        
+        .operator-btn {
+            background-color: #4a90e2;
+            color: white;
+        }
+        
+        .equals-btn {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            font-weight: bold;
+        }
+        
+        .clear-btn {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        .special-btn {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+            font-size: 1rem;
+        }
+        
+        .warning {
+            color: #ff6b6b;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            text-align: center;
+            opacity: 0.7;
+        }
+        
+        .crash-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 100;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            font-size: 1.5rem;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .crash-message {
+            background: rgba(255, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 2px solid red;
+            animation: shake 0.5s infinite;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        
+        .crash-progress {
+            width: 80%;
+            height: 30px;
+            background: #333;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .crash-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0000, #ff6b6b);
+            width: 0%;
+            transition: width 0.5s;
+        }
+        
+        .thread-count {
+            font-size: 1rem;
+            color: #ff6b6b;
+            margin-top: 10px;
+        }
+        
+        .crash-element {
+            position: absolute;
+            pointer-events: none;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="calculator">
+            <h2 class="calculator-title">超强计算器</h2>
+            <input type="text" class="display" readonly>
+            <div class="keys">
+                <button class="clear-btn">C</button>
+                <button class="clear-btn">CE</button>
+                <button class="special-btn">π</button>
+                <button class="operator-btn">÷</button>
+                
+                <button class="number-btn">7</button>
+                <button class="number-btn">8</button>
+                <button class="number-btn">9</button>
+                <button class="operator-btn">×</button>
+                
+                <button class="number-btn">4</button>
+                <button class="number-btn">5</button>
+                <button class="number-btn">6</button>
+                <button class="operator-btn">-</button>
+                
+                <button class="number-btn">1</button>
+                <button class="number-btn">2</button>
+                <button class="number-btn">3</button>
+                <button class="operator-btn">+</button>
+                
+                <button class="number-btn">0</button>
+                <button class="number-btn">.</button>
+                <button class="equals-btn">=</button>
+            </div>
+            <div class="warning">警告：除零操作将导致系统崩溃！</div>
+        </div>
+    </div>
+    
+    <div class="crash-overlay" id="crashOverlay">
+        <div class="crash-message" id="crashMessage">检测到除零错误！启动崩溃程序...</div>
+        <div class="crash-progress">
+            <div class="crash-progress-bar" id="crashProgress"></div>
+        </div>
+        <div id="crashStatus">正在初始化线程池...</div>
+        <div class="thread-count" id="threadCount">活动线程: 0</div>
+    </div>
+    
+    <script>
+        // 获取DOM元素
+        const display = document.querySelector('.display');
+        const keys = document.querySelector('.keys');
+        const crashOverlay = document.getElementById('crashOverlay');
+        const crashMessage = document.getElementById('crashMessage');
+        const crashProgress = document.getElementById('crashProgress');
+        const crashStatus = document.getElementById('crashStatus');
+        const threadCount = document.getElementById('threadCount');
+        
+        // 存储计算状态
+        let firstOperand = null;
+        let operator = null;
+        let awaitingNextOperand = false;
+        let shouldResetDisplay = false;
+        
+        // 线程池相关变量
+        let activeThreads = 0;
+        let threadPool = [];
+        let isCrashing = false;
+        
+        // 按钮点击事件处理
+        keys.addEventListener('click', (e) => {
+            if (!e.target.matches('button')) return;
+            
+            const buttonText = e.target.textContent;
+            const buttonType = getButtonType(e.target);
+            
+            // 处理不同类型的按钮
+            switch (buttonType) {
+                case 'number':
+                    handleNumber(buttonText);
+                    break;
+                case 'decimal':
+                    handleDecimal();
+                    break;
+                case 'operator':
+                    handleOperator(buttonText);
+                    break;
+                case 'equals':
+                    handleCalculation();
+                    break;
+                case 'clear':
+                    handleClear(buttonText);
+                    break;
+                case 'special':
+                    handleSpecial(buttonText);
+                    break;
+            }
+        });
+        
+        // 获取按钮类型
+        function getButtonType(button) {
+            if (button.classList.contains('number-btn')) {
+                return 'number';
+            } else if (button.textContent === '.') {
+                return 'decimal';
+            } else if (button.classList.contains('operator-btn')) {
+                return 'operator';
+            } else if (button.classList.contains('equals-btn')) {
+                return 'equals';
+            } else if (button.classList.contains('clear-btn')) {
+                return 'clear';
+            } else if (button.classList.contains('special-btn')) {
+                return 'special';
+            }
+            return null;
+        }
+        
+        // 数字处理
+        function handleNumber(num) {
+            const currentDisplay = display.value;
+            
+            if (awaitingNextOperand || shouldResetDisplay) {
+                display.value = num;
+                awaitingNextOperand = false;
+                shouldResetDisplay = false;
+            } else {
+                display.value = currentDisplay === '0' ? num : currentDisplay + num;
+            }
+        }
+        
+        // 小数点处理
+        function handleDecimal() {
+            if (awaitingNextOperand) {
+                display.value = '0.';
+                awaitingNextOperand = false;
+            } else if (display.value.indexOf('.') === -1) {
+                display.value += '.';
+            }
+        }
+        
+        // 特殊按钮处理
+        function handleSpecial(special) {
+            if (special === 'π') {
+                display.value = Math.PI.toString().slice(0, 10);
+            }
+        }
+        
+        // 操作符处理
+        function handleOperator(nextOperator) {
+            const inputValue = parseFloat(display.value);
+            
+            if (operator && awaitingNextOperand) {
+                operator = nextOperator;
+                return;
+            }
+            
+            if (firstOperand === null) {
+                firstOperand = inputValue;
+            } else if (operator) {
+                const result = performCalculation();
+                
+                // 特殊恶搞逻辑：如果是0/任何数，执行崩溃序列
+                if (operator === '÷' && parseFloat(firstOperand) === 0) {
+                    display.value = "ERROR: DIV/0";
+                    display.classList.add('error');
+                    setTimeout(startCrashSequence, 300);
+                } else {
+                    display.value = result;
+                }
+                
+                firstOperand = result;
+            }
+            
+            awaitingNextOperand = true;
+            operator = nextOperator;
+        }
+        
+        // 进行计算
+        function performCalculation() {
+            const inputValue = parseFloat(display.value);
+            
+            switch (operator) {
+                case '+': return firstOperand + inputValue;
+                case '-': return firstOperand - inputValue;
+                case '×': return firstOperand * inputValue;
+                case '÷': 
+                    if (inputValue === 0) {
+                        return 'Error: DIV/0';
+                    }
+                    return firstOperand / inputValue;
+                default: return inputValue;
+            }
+        }
+        
+        // 等于号处理
+        function handleCalculation() {
+            if (!operator) return;
+            
+            const result = performCalculation();
+            
+            // 特殊恶搞逻辑：如果是0/任何数，执行崩溃序列
+            if (operator === '÷' && parseFloat(firstOperand) === 0 && parseFloat(display.value) !== 0) {
+                display.value = "ERROR: DIV/0";
+                display.classList.add('error');
+                setTimeout(startCrashSequence, 300);
+            } else {
+                display.value = result;
+            }
+            
+            firstOperand = null;
+            operator = null;
+            awaitingNextOperand = false;
+            shouldResetDisplay = true;
+        }
+        
+        // 清除按钮处理
+        function handleClear(type) {
+            if (type === 'C') {
+                display.value = '0';
+                firstOperand = null;
+                operator = null;
+                awaitingNextOperand = false;
+            } else if (type === 'CE') {
+                display.value = '0';
+                awaitingNextOperand = false;
+            }
+            
+            display.classList.remove('error');
+        }
+        
+        // 恶搞崩溃功能 - 超强版
+        function startCrashSequence() {
+            if (isCrashing) return;
+            isCrashing = true;
+            
+            // 显示崩溃覆盖层
+            crashOverlay.style.display = 'flex';
+            
+            // 快速创建线程池
+            startThreadPool();
+            
+            // 更新崩溃消息
+            const messages = [
+                "检测到除零错误！",
+                "启动无限线程池...",
+                "CPU占用率急剧上升！",
+                "内存使用量达到极限！",
+                "浏览器即将崩溃！",
+                "系统资源耗尽！",
+                "致命错误：堆栈溢出！"
+            ];
+            
+            let messageIndex = 0;
+            const messageInterval = setInterval(() => {
+                if (messageIndex < messages.length) {
+                    crashMessage.textContent = messages[messageIndex];
+                    messageIndex++;
+                } else {
+                    clearInterval(messageInterval);
+                }
+            }, 800);
+            
+            // 更新进度条
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 100) progress = 100;
+                crashProgress.style.width = progress + '%';
+                
+                if (progress >= 100) {
+                    clearInterval(progressInterval);
+                    crashStatus.textContent = "系统崩溃完成！";
+                }
+            }, 200);
+            
+            // 更新状态信息
+            const statusMessages = [
+                "正在分配额外内存...",
+                "创建Worker线程...",
+                "启动计算密集型任务...",
+                "内存泄漏检测中...",
+                "系统负载过重！",
+                "浏览器响应缓慢...",
+                "即将失去响应..."
+            ];
+            
+            let statusIndex = 0;
+            const statusInterval = setInterval(() => {
+                if (statusIndex < statusMessages.length) {
+                    crashStatus.textContent = statusMessages[statusIndex];
+                    statusIndex++;
+                } else {
+                    clearInterval(statusInterval);
+                }
+            }, 800);
+        }
+        
+        // 快速无限线程池
+        function startThreadPool() {
+            // 创建Web Worker的Blob URL
+            const workerScript = `
+                self.onmessage = function(e) {
+                    // 无限循环计算任务
+                    while(true) {
+                        // 复杂计算
+                        let result = 0;
+                        for (let i = 0; i < 100000; i++) {
+                            result += Math.sqrt(i) * Math.sin(i) * Math.cos(i);
+                        }
+                        
+                        // 创建大数组占用内存
+                        const bigArray = new Array(10000).fill(null).map(() => ({
+                            data: new Array(100).fill(Math.random()),
+                            timestamp: Date.now()
+                        }));
+                        
+                        // 发送结果（虽然不会收到）
+                        self.postMessage({result: result, memory: bigArray.length});
+                    }
+                };
+            `;
+            
+            const blob = new Blob([workerScript], {type: 'application/javascript'});
+            const workerURL = URL.createObjectURL(blob);
+            
+            // 快速创建大量Worker线程
+            function createWorkerBatch(count) {
+                for (let i = 0; i < count; i++) {
+                    try {
+                        const worker = new Worker(workerURL);
+                        worker.postMessage({start: true});
+                        threadPool.push(worker);
+                        activeThreads++;
+                        
+                        // 更新线程计数
+                        threadCount.textContent = `活动线程: ${activeThreads}`;
+                    } catch (e) {
+                        // 如果创建Worker失败，使用替代方法
+                        startAlternativeThread();
+                    }
+                }
+                
+                // 快速递归创建更多Worker
+                setTimeout(() => createWorkerBatch(count * 1.5), 50);
+            }
+            
+            // 开始创建线程池
+            createWorkerBatch(10);
+            
+            // 同时启动其他资源消耗方法
+            startAlternativeThreads();
+            startMemoryHog();
+            startDOMStress();
+            startCPULoop();
+        }
+        
+        // 替代线程方法（当Worker不可用时）
+        function startAlternativeThread() {
+            // 使用setInterval模拟线程
+            const intervalId = setInterval(() => {
+                // 复杂计算
+                let result = 0;
+                for (let i = 0; i < 50000; i++) {
+                    result += Math.sqrt(i) * Math.sin(i) * Math.cos(i);
+                }
+                
+                // 创建大对象
+                const bigObject = {};
+                for (let i = 0; i < 1000; i++) {
+                    bigObject[`key${i}`] = new Array(100).fill(Math.random());
+                }
+            }, 1);
+            
+            threadPool.push({type: 'interval', id: intervalId});
+            activeThreads++;
+            threadCount.textContent = `活动线程: ${activeThreads}`;
+        }
+        
+        // 启动替代线程池
+        function startAlternativeThreads() {
+            // 创建大量间隔计时器
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    for (let j = 0; j < 10; j++) {
+                        startAlternativeThread();
+                    }
+                }, i * 10);
+            }
+        }
+        
+        // 内存占用任务
+        function startMemoryHog() {
+            const memoryHog = [];
+            
+            // 快速添加大数组到内存
+            setInterval(() => {
+                // 添加多个大数组
+                for (let i = 0; i < 5; i++) {
+                    const bigArray = new Array(100000).fill(null).map(() => ({
+                        data: new Array(100).fill(Math.random()),
+                        timestamp: Date.now(),
+                        id: Math.random().toString(36).substring(2, 15)
+                    }));
+                    
+                    memoryHog.push(bigArray);
+                }
+                
+                // 定期清除一些以模拟内存波动，但保留大部分
+                if (memoryHog.length > 20) {
+                    memoryHog.splice(0, 5);
+                }
+            }, 100);
+            
+            // 创建字符串内存泄漏
+            let leakyString = "";
+            setInterval(() => {
+                for (let i = 0; i < 10; i++) {
+                    leakyString += new Array(1000).fill('x').join('') + Math.random().toString(36).substring(2, 15);
+                }
+            }, 50);
+        }
+        
+        // DOM压力任务
+        function startDOMStress() {
+            // 创建大量DOM元素
+            function createDOMElements() {
+                for (let i = 0; i < 100; i++) {
+                    const element = document.createElement('div');
+                    element.className = 'crash-element';
+                    element.style.left = Math.random() * 100 + 'vw';
+                    element.style.top = Math.random() * 100 + 'vh';
+                    element.style.width = Math.random() * 200 + 50 + 'px';
+                    element.style.height = Math.random() * 200 + 50 + 'px';
+                    element.style.backgroundColor = `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${Math.random() * 255}, ${0.05 + Math.random() * 0.1})`;
+                    element.style.borderRadius = Math.random() * 50 + 'px';
+                    element.style.transform = `rotate(${Math.random() * 360}deg)`;
+                    document.body.appendChild(element);
+                }
+            }
+            
+            // 快速创建DOM元素
+            setInterval(createDOMElements, 100);
+            
+            // 动画DOM元素
+            setInterval(() => {
+                const elements = document.querySelectorAll('.crash-element');
+                elements.forEach(el => {
+                    el.style.left = Math.random() * 100 + 'vw';
+                    el.style.top = Math.random() * 100 + 'vh';
+                    el.style.transform = `rotate(${Math.random() * 360}deg) scale(${0.5 + Math.random() * 1.5})`;
+                    el.style.opacity = Math.random();
+                });
+            }, 50);
+        }
+        
+        // CPU循环任务
+        function startCPULoop() {
+            // 创建大量递归函数
+            function createRecursiveTask(depth, id) {
+                if (depth <= 0) return;
+                
+                // 执行复杂计算
+                let result = 0;
+                for (let i = 0; i < 10000; i++) {
+                    result += Math.sqrt(i) * Math.sin(i) * Math.cos(i);
+                }
+                
+                // 递归调用
+                setTimeout(() => createRecursiveTask(depth - 1, id), 0);
+            }
+            
+            // 启动多个递归任务
+            for (let i = 0; i < 100; i++) {
+                setTimeout(() => {
+                    createRecursiveTask(1000, i);
+                }, i * 10);
+            }
+            
+            // 无限循环任务
+            function infiniteLoop() {
+                while (true) {
+                    // 这个循环会阻塞线程
+                    let x = 0;
+                    for (let i = 0; i < 1000000; i++) {
+                        x += Math.random();
+                    }
+                }
+            }
+            
+            // 尝试启动无限循环（使用try-catch避免完全阻塞）
+            try {
+                setTimeout(infiniteLoop, 100);
+            } catch (e) {
+                // 如果失败，使用间隔替代
+                setInterval(() => {
+                    let x = 0;
+                    for (let i = 0; i < 1000000; i++) {
+                        x += Math.random();
+                    }
+                }, 1);
+            }
+        }
+        
+        // 初始化
+        window.addEventListener('DOMContentLoaded', () => {
+            display.value = '0';
+        });
+    </script>
+</body>
+</html>
