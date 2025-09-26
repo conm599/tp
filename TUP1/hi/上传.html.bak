@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rainyun 对象存储管理器</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .description {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .card-title {
+            font-size: 1.3rem;
+            color: #3498db;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .card-title i {
+            margin-right: 10px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #3498db;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+            background: rgba(52, 152, 219, 0.05);
+        }
+        
+        .upload-area:hover {
+            background: rgba(52, 152, 219, 0.1);
+        }
+        
+        .upload-area i {
+            font-size: 3rem;
+            color: #3498db;
+            margin-bottom: 15px;
+        }
+        
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn i {
+            margin-right: 8px;
+        }
+        
+        .btn-secondary {
+            background: #2ecc71;
+        }
+        
+        .btn-secondary:hover {
+            background: #27ae60;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-list {
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            transition: all 0.2s;
+        }
+        
+        .file-item:hover {
+            background: #f9f9f9;
+        }
+        
+        .file-name {
+            display: flex;
+            align-items: center;
+            font-weight: 500;
+        }
+        
+        .file-name i {
+            margin-right: 10px;
+            color: #3498db;
+        }
+        
+        .file-actions a {
+            color: #2ecc71;
+            text-decoration: none;
+            margin-left: 15px;
+            font-weight: 500;
+        }
+        
+        .file-actions a:hover {
+            color: #27ae60;
+            text-decoration: underline;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: #ecf0f1;
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background: #2ecc71;
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .config-form {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        .form-group input {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            display: none;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(52, 152, 219, 0.3);
+            border-radius: 50%;
+            border-top-color: #3498db;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Rainyun 对象存储管理器</h1>
+            <p class="description">上传、下载和管理您的云端文件</p>
+        </header>
+        
+        <div class="dashboard">
+            <div class="card">
+                <h2 class="card-title"><i class="fas fa-upload"></i> 文件上传</h2>
+                
+                <div class="upload-area" id="dropArea">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>拖放文件到此处或点击选择文件</p>
+                    <input type="file" id="fileInput" class="file-input" multiple>
+                    <button class="btn" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-file"></i> 选择文件
+                    </button>
+                </div>
+                
+                <div class="progress-bar">
+                    <div class="progress" id="uploadProgress"></div>
+                </div>
+                
+                <button class="btn btn-secondary" onclick="uploadFile()">
+                    <i class="fas fa-cloud-upload-alt"></i> 开始上传
+                </button>
+                
+                <div id="uploadStatus" class="status"></div>
+            </div>
+            
+            <div class="card">
+                <h2 class="card-title"><i class="fas fa-download"></i> 文件下载</h2>
+                
+                <div class="file-list" id="fileList">
+                    <div class="file-item">
+                        <div class="file-name"><i class="fas fa-file-pdf"></i> example.pdf</div>
+                        <div class="file-actions">
+                            <a href="#"><i class="fas fa-download"></i> 下载</a>
+                            <a href="#"><i class="fas fa-link"></i> 获取链接</a>
+                        </div>
+                    </div>
+                    <div class="file-item">
+                        <div class="file-name"><i class="fas fa-file-image"></i> photo.jpg</div>
+                        <div class="file-actions">
+                            <a href="#"><i class="fas fa-download"></i> 下载</a>
+                            <a href="#"><i class="fas fa-link"></i> 获取链接</a>
+                        </div>
+                    </div>
+                    <div class="file-item">
+                        <div class="file-name"><i class="fas fa-file-video"></i> video.mp4</div>
+                        <div class="file-actions">
+                            <a href="#"><i class="fas fa-download"></i> 下载</a>
+                            <a href="#"><i class="fas fa-link"></i> 获取链接</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="btn" onclick="refreshFileList()">
+                    <i class="fas fa-sync-alt"></i> 刷新文件列表
+                </button>
+                
+                <div id="downloadStatus" class="status"></div>
+            </div>
+        </div>
+        
+        <div class="card" style="margin-top: 20px;">
+            <h2 class="card-title"><i class="fas fa-cog"></i> 配置设置</h2>
+            
+            <div class="config-form">
+                <div class="form-group">
+                    <label for="accessKey">Access Key</label>
+                    <input type="text" id="accessKey" placeholder="输入雨云对象存储的AccessKey">
+                </div>
+                
+                <div class="form-group">
+                    <label for="secretKey">Secret Key</label>
+                    <input type="password" id="secretKey" placeholder="输入雨云对象存储的SecretKey">
+                </div>
+                
+                <div class="form-group">
+                    <label for="bucketName">存储桶名称</label>
+                    <input type="text" id="bucketName" placeholder="输入存储桶名称">
+                </div>
+                
+                <button class="btn" onclick="saveConfig()">
+                    <i class="fas fa-save"></i> 保存配置
+                </button>
+            </div>
+            
+            <div id="configStatus" class="status"></div>
+        </div>
+        
+        <footer>
+            <p>© 2023 Rainyun 对象存储管理器 | 使用 AWS SDK for JavaScript</p>
+        </footer>
+    </div>
+
+    <script>
+        // 初始化变量
+        let selectedFile = null;
+        let s3Client = null;
+        
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载保存的配置
+            loadConfig();
+            
+            // 设置拖放事件
+            const dropArea = document.getElementById('dropArea');
+            dropArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                dropArea.style.background = 'rgba(52, 152, 219, 0.2)';
+            });
+            
+            dropArea.addEventListener('dragleave', function() {
+                dropArea.style.background = 'rgba(52, 152, 219, 0.05)';
+            });
+            
+            dropArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                dropArea.style.background = 'rgba(52, 152, 219, 0.05)';
+                
+                if (e.dataTransfer.files.length) {
+                    handleFiles(e.dataTransfer.files);
+                }
+            });
+            
+            // 文件输入变更事件
+            document.getElementById('fileInput').addEventListener('change', function() {
+                if (this.files.length) {
+                    handleFiles(this.files);
+                }
+            });
+        });
+        
+        // 处理选择的文件
+        function handleFiles(files) {
+            selectedFile = files[0];
+            document.getElementById('dropArea').innerHTML = `
+                <i class="fas fa-file"></i>
+                <p>已选择: ${selectedFile.name}</p>
+                <p>大小: ${formatFileSize(selectedFile.size)}</p>
+                <button class="btn" onclick="document.getElementById('fileInput').click()">
+                    <i class="fas fa-exchange-alt"></i> 更换文件
+                </button>
+            `;
+        }
+        
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 加载保存的配置
+        function loadConfig() {
+            const accessKey = localStorage.getItem('rainyun_accessKey');
+            const secretKey = localStorage.getItem('rainyun_secretKey');
+            const bucketName = localStorage.getItem('rainyun_bucketName');
+            
+            if (accessKey) document.getElementById('accessKey').value = accessKey;
+            if (secretKey) document.getElementById('secretKey').value = secretKey;
+            if (bucketName) document.getElementById('bucketName').value = bucketName;
+        }
+        
+        // 保存配置
+        function saveConfig() {
+            const accessKey = document.getElementById('accessKey').value;
+            const secretKey = document.getElementById('secretKey').value;
+            const bucketName = document.getElementById('bucketName').value;
+            
+            if (!accessKey || !secretKey || !bucketName) {
+                showStatus('configStatus', '请填写所有配置字段', 'error');
+                return;
+            }
+            
+            localStorage.setItem('rainyun_accessKey', accessKey);
+            localStorage.setItem('rainyun_secretKey', secretKey);
+            localStorage.setItem('rainyun_bucketName', bucketName);
+            
+            showStatus('configStatus', '配置已保存成功！', 'success');
+            
+            // 初始化S3客户端
+            initS3Client();
+        }
+        
+        // 初始化S3客户端
+        function initS3Client() {
+            // 这里需要动态加载AWS SDK
+            // 在实际应用中，您需要将AWS SDK包含在项目中
+            console.log('初始化S3客户端...');
+            
+            // 模拟初始化成功
+            s3Client = {
+                send: function(command) {
+                    console.log('执行命令: ', command);
+                    return Promise.resolve({});
+                }
+            };
+            
+            showStatus('configStatus', 'S3客户端初始化成功！', 'success');
+        }
+        
+        // 上传文件
+        function uploadFile() {
+            if (!selectedFile) {
+                showStatus('uploadStatus', '请先选择一个文件', 'error');
+                return;
+            }
+            
+            if (!s3Client) {
+                showStatus('uploadStatus', '请先保存配置并初始化S3客户端', 'error');
+                return;
+            }
+            
+            // 模拟上传过程
+            showStatus('uploadStatus', '正在上传文件...', '');
+            document.getElementById('uploadStatus').innerHTML = '<span class="loading"></span> 正在上传文件...';
+            
+            // 模拟进度更新
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 5;
+                document.getElementById('uploadProgress').style.width = `${progress}%`;
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    showStatus('uploadStatus', '文件上传成功！', 'success');
+                    
+                    // 刷新文件列表
+                    refreshFileList();
+                    
+                    // 重置上传区域
+                    document.getElementById('dropArea').innerHTML = `
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>拖放文件到此处或点击选择文件</p>
+                        <input type="file" id="fileInput" class="file-input" multiple>
+                        <button class="btn" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-file"></i> 选择文件
+                        </button>
+                    `;
+                    document.getElementById('uploadProgress').style.width = '0%';
+                    selectedFile = null;
+                }
+            }, 100);
+        }
+        
+        // 刷新文件列表
+        function refreshFileList() {
+            if (!s3Client) {
+                showStatus('downloadStatus', '请先保存配置并初始化S3客户端', 'error');
+                return;
+            }
+            
+            // 模拟获取文件列表
+            showStatus('downloadStatus', '<span class="loading"></span> 正在获取文件列表...', '');
+            
+            setTimeout(() => {
+                // 模拟添加新文件
+                if (selectedFile) {
+                    const fileList = document.getElementById('fileList');
+                    const fileItem = document.createElement('div');
+                    fileItem.className = 'file-item';
+                    fileItem.innerHTML = `
+                        <div class="file-name"><i class="fas fa-file"></i> ${selectedFile.name}</div>
+                        <div class="file-actions">
+                            <a href="#"><i class="fas fa-download"></i> 下载</a>
+                            <a href="#"><i class="fas fa-link"></i> 获取链接</a>
+                        </div>
+                    `;
+                    fileList.prepend(fileItem);
+                }
+                
+                showStatus('downloadStatus', '文件列表已更新', 'success');
+            }, 1500);
+        }
+        
+        // 显示状态消息
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = 'status';
+            
+            if (type) {
+                element.classList.add(type);
+            }
+        }
+    </script>
+</body>
+</html>
