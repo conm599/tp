@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>语音转文字工具</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(to right, #4a6cf7, #6a82fb);
+            color: white;
+            padding: 25px 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+        }
+        
+        .main {
+            padding: 30px;
+        }
+        
+        .upload-container {
+            border: 2px dashed #4a6cf7;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s;
+            background: #f8f9ff;
+        }
+        
+        .upload-container.dragover {
+            background: #e0e7ff;
+            border-color: #3b5bdb;
+        }
+        
+        .upload-icon {
+            font-size: 60px;
+            color: #4a6cf7;
+            margin-bottom: 20px;
+        }
+        
+        .upload-text {
+            margin-bottom: 25px;
+        }
+        
+        .upload-text h3 {
+            font-size: 22px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .upload-text p {
+            color: #666;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .browse-btn {
+            background: #4a6cf7;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            display: inline-block;
+            transition: all 0.3s;
+            border: none;
+            font-size: 16px;
+        }
+        
+        .browse-btn:hover {
+            background: #3b5bdb;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(59, 91, 219, 0.3);
+        }
+        
+        .selected-file {
+            margin-top: 20px;
+            padding: 15px;
+            background: #eef2ff;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .selected-file i {
+            color: #4a6cf7;
+            margin-right: 10px;
+        }
+        
+        .progress-container {
+            margin: 30px 0;
+            display: none;
+        }
+        
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .progress-bar {
+            height: 12px;
+            background: #eef2ff;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background: linear-gradient(to right, #4a6cf7, #6a82fb);
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+        
+        .api-key-container {
+            margin-bottom: 25px;
+        }
+        
+        .api-key-container label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .api-key-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .api-key-input:focus {
+            border-color: #4a6cf7;
+            outline: none;
+        }
+        
+        .model-selection {
+            margin-bottom: 25px;
+        }
+        
+        .model-selection label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .model-select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .model-select:focus {
+            border-color: #4a6cf7;
+            outline: none;
+        }
+        
+        .result-container {
+            display: none;
+            margin-top: 30px;
+            padding: 25px;
+            background: #f8f9ff;
+            border-radius: 12px;
+            border-left: 5px solid #4a6cf7;
+        }
+        
+        .result-container h3 {
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+        }
+        
+        .result-container h3 i {
+            margin-right: 10px;
+            color: #4a6cf7;
+        }
+        
+        .result-text {
+            line-height: 1.6;
+            color: #444;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .action-btn {
+            padding: 14px 28px;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .action-btn i {
+            margin-right: 8px;
+        }
+        
+        .transcribe-btn {
+            background: #4a6cf7;
+            color: white;
+        }
+        
+        .transcribe-btn:hover {
+            background: #3b5bdb;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(59, 91, 219, 0.3);
+        }
+        
+        .reset-btn {
+            background: #f8f9ff;
+            color: #4a6cf7;
+            border: 2px solid #4a6cf7;
+        }
+        
+        .reset-btn:hover {
+            background: #eef2ff;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 14px;
+            border-top: 1px solid #eee;
+        }
+        
+        @media (max-width: 600px) {
+            .main {
+                padding: 20px;
+            }
+            
+            .upload-container {
+                padding: 25px;
+            }
+            
+            .upload-icon {
+                font-size: 45px;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-microphone-alt"></i> 语音转文字工具</h1>
+            <p>上传音频文件，实时查看上传进度，并转换为文字</p>
+        </div>
+        
+        <div class="main">
+            <div class="api-key-container">
+                <label for="api-key">硅基流动 API 密钥</label>
+                <input type="password" id="api-key" class="api-key-input" placeholder="请输入您的 API 密钥 (sk-...)">
+            </div>
+            
+            <div class="model-selection">
+                <label for="model-select">选择语音识别模型</label>
+                <select id="model-select" class="model-select">
+                    <option value="FunAudioLLM/SenseVoiceSmall">FunAudioLLM/SenseVoiceSmall</option>
+                    <option value="TeleAI/TeleSpeechASR">TeleAI/TeleSpeechASR (支持方言)</option>
+                </select>
+            </div>
+            
+            <div class="upload-container" id="upload-container">
+                <div class="upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <div class="upload-text">
+                    <h3>拖放音频文件到此处</h3>
+                    <p>或者</p>
+                </div>
+                <input type="file" id="file-input" class="file-input" accept=".flac,.mp3,.mp4,.mpeg,.mpga,.m4a,.ogg,.wav,.webm">
+                <label for="file-input" class="browse-btn"><i class="fas fa-search"></i> 浏览文件</label>
+                
+                <div class="selected-file" id="selected-file">
+                    <i class="fas fa-file-audio"></i>
+                    <span id="file-name">未选择文件</span>
+                </div>
+            </div>
+            
+            <div class="progress-container" id="progress-container">
+                <div class="progress-info">
+                    <span>上传中...</span>
+                    <span id="progress-percentage">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress" id="progress"></div>
+                </div>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="action-btn transcribe-btn" id="transcribe-btn">
+                    <i class="fas fa-play"></i> 开始转换
+                </button>
+                <button class="action-btn reset-btn" id="reset-btn">
+                    <i class="fas fa-redo"></i> 重置
+                </button>
+            </div>
+            
+            <div class="result-container" id="result-container">
+                <h3><i class="fas fa-text-width"></i> 转换结果</h3>
+                <div class="result-text" id="result-text">
+                    <!-- 转换结果将显示在这里 -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>© 2023 语音转文字工具 | 支持多种音频格式 | 使用硅基流动API</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadContainer = document.getElementById('upload-container');
+            const fileInput = document.getElementById('file-input');
+            const selectedFile = document.getElementById('selected-file');
+            const fileName = document.getElementById('file-name');
+            const progressContainer = document.getElementById('progress-container');
+            const progress = document.getElementById('progress');
+            const progressPercentage = document.getElementById('progress-percentage');
+            const transcribeBtn = document.getElementById('transcribe-btn');
+            const resetBtn = document.getElementById('reset-btn');
+            const resultContainer = document.getElementById('result-container');
+            const resultText = document.getElementById('result-text');
+            const apiKeyInput = document.getElementById('api-key');
+            const modelSelect = document.getElementById('model-select');
+            
+            let selectedFileObj = null;
+            
+            // 拖放事件处理
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadContainer.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadContainer.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadContainer.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                uploadContainer.classList.add('dragover');
+            }
+            
+            function unhighlight() {
+                uploadContainer.classList.remove('dragover');
+            }
+            
+            // 文件拖放处理
+            uploadContainer.addEventListener('drop', handleDrop, false);
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleFiles(files);
+            }
+            
+            // 文件选择处理
+            fileInput.addEventListener('change', function() {
+                handleFiles(this.files);
+            });
+            
+            function handleFiles(files) {
+                if (files.length > 0) {
+                    selectedFileObj = files[0];
+                    fileName.textContent = selectedFileObj.name;
+                    selectedFile.style.display = 'block';
+                }
+            }
+            
+            // 开始转换按钮点击事件
+            transcribeBtn.addEventListener('click', function() {
+                if (!selectedFileObj) {
+                    alert('请先选择音频文件');
+                    return;
+                }
+                
+                if (!apiKeyInput.value) {
+                    alert('请输入API密钥');
+                    return;
+                }
+                
+                // 显示进度条
+                progressContainer.style.display = 'block';
+                
+                // 模拟上传进度
+                let width = 0;
+                const interval = setInterval(() => {
+                    if (width >= 100) {
+                        clearInterval(interval);
+                        // 模拟转换完成
+                        setTimeout(() => {
+                            simulateTranscription();
+                        }, 500);
+                    } else {
+                        width += 5;
+                        progress.style.width = width + '%';
+                        progressPercentage.textContent = width + '%';
+                    }
+                }, 100);
+            });
+            
+            // 重置按钮点击事件
+            resetBtn.addEventListener('click', function() {
+                resetForm();
+            });
+            
+            // 模拟语音转文字功能
+            function simulateTranscription() {
+                // 这里是模拟的转换结果
+                // 实际应用中应该调用API并处理响应
+                const sampleText = "这是从音频文件中转换得到的文本。在实际应用中，这里将显示通过硅基流动API获取的真实转换结果。您可以复制此文本或进行进一步编辑。语音转文字技术可以应用于会议记录、讲座转录、视频字幕生成等多种场景。";
+                
+                resultText.textContent = sampleText;
+                resultContainer.style.display = 'block';
+                
+                // 滚动到结果区域
+                resultContainer.scrollIntoView({ behavior: 'smooth' });
+            }
+            
+            // 重置表单
+            function resetForm() {
+                fileInput.value = '';
+                selectedFile.style.display = 'none';
+                progressContainer.style.display = 'none';
+                progress.style.width = '0%';
+                progressPercentage.textContent = '0%';
+                resultContainer.style.display = 'none';
+                selectedFileObj = null;
+            }
+        });
+    </script>
+</body>
+</html>
