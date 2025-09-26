@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中文域名解析工具</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9f7e9;
+            border-radius: 4px;
+            display: none;
+        }
+        .note {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff3cd;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>域名解析工具</h1>
+        <div class="input-group">
+            <label for="domainInput">请输入域名（中文或英文）:</label>
+            <input type="text" id="domainInput" placeholder="例如：例子.中国 或 example.com">
+        </div>
+        <button id="parseBtn">解析域名</button>
+
+        <div id="result">
+            <strong>解析结果 (Punycode):</strong> <span id="parsedDomain"></span>
+        </div>
+
+        <div class="note">
+            <p><strong>注意：</strong></p>
+            <ul>
+                <li>中文域名通过Punycode编码转换为ASCII字符串，以便DNS系统识别</li>
+                <li>英文域名不区分大小写，工具会将其统一转换为小写字母</li>
+                <li>本工具仅进行格式转换展示，不涉及真正的DNS查询获取IP地址</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // 引入Punycode库
+        const punycode = {
+            toASCII: function(domain) {
+                try {
+                    // 使用URL接口处理域名
+                    const url = new URL('http://' + domain);
+                    return url.hostname;
+                } catch (e) {
+                    // 如果URL接口无法处理，尝试手动转换
+                    return this.manualToASCII(domain);
+                }
+            },
+            
+            manualToASCII: function(domain) {
+                // 简单的手动转换实现（实际应用中应使用完整库）
+                return domain.split('.').map(part => {
+                    if (/[^\x00-\x7F]/.test(part)) {
+                        return 'xn--' + this.encodePart(part);
+                    }
+                    return part.toLowerCase();
+                }).join('.');
+            },
+            
+            encodePart: function(part) {
+                // 简化的编码实现（实际应用中应使用完整算法）
+                return part.split('').map(char => {
+                    const code = char.charCodeAt(0);
+                    return code > 127 ? code.toString(16) : char;
+                }).join('');
+            }
+        };
+
+        document.getElementById('parseBtn').addEventListener('click', function() {
+            const input = document.getElementById('domainInput').value.trim();
+            const resultElement = document.getElementById('result');
+            const parsedDomainElement = document.getElementById('parsedDomain');
+
+            if (!input) {
+                alert('请输入域名');
+                return;
+            }
+
+            try {
+                // 使用Punycode转换
+                const parsedResult = punycode.toASCII(input);
+                parsedDomainElement.textContent = parsedResult;
+                resultElement.style.display = 'block';
+            } catch (e) {
+                alert('域名解析出错: ' + e.message);
+            }
+        });
+    </script>
+</body>
+</html>
