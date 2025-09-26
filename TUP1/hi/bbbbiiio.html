@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QQ邮箱发送测试</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 400px;
+      margin: 50px auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin: 10px 0;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .message {
+      margin-top: 15px;
+      color: #333;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h2>QQ邮箱发送测试</h2>
+  <form id="emailForm">
+    <label for="email">QQ邮箱地址：</label>
+    <input type="email" id="email" required placeholder="example@qq.com" />
+    
+    <label for="password">邮箱授权码：</label>
+    <input type="password" id="password" required placeholder="输入QQ邮箱授权码" />
+    
+    <button type="submit">发送测试邮件</button>
+  </form>
+
+  <div class="message" id="message"></div>
+
+  <!-- SMTP.js 依赖 -->
+  <script src="https://smtpjs.com/v3/smtp.js"></script>
+  <script>
+    document.getElementById("emailForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const messageDiv = document.getElementById("message");
+      messageDiv.innerHTML = "正在发送...";
+      messageDiv.className = "message";
+
+      // 配置SMTP参数
+      Email.send({
+        Host: "smtp.qq.com",         // QQ邮箱SMTP服务器
+        Port: 465,                   // SSL加密端口
+        Secure: true,                // 使用SSL/TLS加密
+        Username: email,
+        Password: password,
+        To: email,                   // 发送给当前邮箱（可修改）
+        From: email,
+        Subject: "SMTP.js测试邮件",
+        Body: "这是一封通过前端SMTP.js发送的测试邮件！"
+      }).then(
+        (response) => {
+          messageDiv.innerHTML = "邮件发送成功！";
+          messageDiv.className = "message";
+          console.log("邮件发送成功:", response);
+        },
+        (error) => {
+          messageDiv.innerHTML = "发送失败：" + error;
+          messageDiv.className = "message error";
+          console.error("发送失败:", error);
+        }
+      );
+    });
+  </script>
+</body>
+</html>
