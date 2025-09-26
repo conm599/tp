@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepSeek API 对话界面</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #7e57c2;
+            --primary-light: #b085f5;
+            --primary-dark: #4d2c91;
+            --secondary-color: #26a69a;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --bg-light: #f5f7fa;
+            --bg-white: #ffffff;
+            --border-color: #e0e0e0;
+            --success-color: #66bb6a;
+            --warning-color: #ffa726;
+            --error-color: #ef5350;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .logo i {
+            font-size: 1.8rem;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 300px;
+            background-color: var(--bg-white);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+
+        .new-chat-btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            border: none;
+            padding: 0.8rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.2s;
+        }
+
+        .new-chat-btn:hover {
+            background: linear-gradient(135deg, var(--primary-light), var(--primary-color));
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .history-title {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .clear-history {
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .clear-history:hover {
+            color: var(--primary-color);
+        }
+
+        .chat-list {
+            list-style: none;
+        }
+
+        .chat-item {
+            padding: 0.8rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .chat-item:hover {
+            background-color: var(--bg-light);
+        }
+
+        .chat-item.active {
+            background-color: rgba(126, 87, 194, 0.1);
+            color: var(--primary-color);
+        }
+
+        .chat-item i {
+            font-size: 1rem;
+        }
+
+        .chat-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            line-height: 1.6;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background: linear-gradient(135deg, var(--primary-light), var(--primary-color));
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .assistant-message {
+            align-self: flex-start;
+            background-color: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        .code-block {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 0.5rem 0;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 0.3rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .chat-input-container {
+            padding: 1.5rem;
+            background-color: var(--bg-white);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            resize: none;
+            min-height: 60px;
+            max-height: 200px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .chat-input:focus {
+            border-color: var(--primary-color);
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .send-btn:hover {
+            background: linear-gradient(135deg, var(--primary-light), var(--primary-color));
+            transform: scale(1.05);
+        }
+
+        .send-btn:disabled {
+            background: var(--border-color);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .action-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--bg-white);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: var(--bg-white);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .form-hint {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+        }
+
+        .slider-value {
+            min-width: 40px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .checkbox {
+            width: 18px;
+            height: 18px;
+        }
+
+        .save-btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            display: block;
+            margin-left: auto;
+            transition: all 0.2s;
+        }
+
+        .save-btn:hover {
+            background: linear-gradient(135deg, var(--primary-light), var(--primary-color));
+        }
+
+        .typing-indicator {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background-color: var(--bg-white);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            border-bottom-left-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--text-secondary);
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: typingAnimation 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typingAnimation {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+
+        .online-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .online-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--success-color);
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <i class="fas fa-brain"></i>
+            <span>DeepSeek API 对话界面</span>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <button class="new-chat-btn" id="newChatBtn">
+                <i class="fas fa-plus"></i>
+                <span>新建对话</span>
+            </button>
+            
+            <div class="history-header">
+                <div class="history-title">历史对话</div>
+                <div class="clear-history" id="clearHistoryBtn">清空</div>
+            </div>
+            
+            <ul class="chat-list" id="chatList">
+                <!-- 历史对话将通过JavaScript动态添加 -->
+            </ul>
+        </div>
+
+        <div class="chat-content">
+            <div class="chat-messages" id="chatMessages">
+                <div class="message assistant-message">
+                    <div class="message-header">
+                        <span>DeepSeek助手</span>
+                        <span>刚刚</span>
+                    </div>
+                    <p>您好！我是DeepSeek AI助手。请提供您的API密钥并设置参数后，即可开始对话。您也可以开启联网搜索功能获取最新信息。</p>
+                </div>
+            </div>
+            
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <textarea class="chat-input" id="chatInput" placeholder="输入您的消息..." rows="1"></textarea>
+                    <button class="send-btn" id="sendBtn" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="action-btn" id="settingsBtn">
+                        <i class="fas fa-cog"></i>
+                        <span>API设置</span>
+                    </button>
+                    <button class="action-btn" id="webSearchBtn">
+                        <i class="fas fa-search"></i>
+                        <span>联网搜索</span>
+                    </button>
+                    <div class="online-status">
+                        <div class="online-dot"></div>
+                        <span>在线</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 设置模态框 -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">API 参数设置</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="apiKey">API Key *</label>
+                <input type="password" class="form-input" id="apiKey" placeholder="输入您的DeepSeek API密钥">
+                <p class="form-hint">您的API密钥仅保存在本地浏览器中，不会发送到任何其他服务器。</p>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="modelSelect">模型选择</label>
+                <select class="form-input" id="modelSelect">
+                    <option value="deepseek-chat">deepseek-chat (非思考模式)</option>
+                    <option value="deepseek-reasoner">deepseek-reasoner (思考模式)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="temperature">Temperature: <span class="slider-value" id="temperatureValue">0.7</span></label>
+                <div class="slider-container">
+                    <input type="range" class="slider" id="temperature" min="0" max="1" step="0.01" value="0.7">
+                </div>
+                <p class="form-hint">控制输出的随机性。值越高输出越随机，值越低输出越确定。</p>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="maxTokens">最大生成长度: <span class="slider-value" id="maxTokensValue">1024</span></label>
+                <div class="slider-container">
+                    <input type="range" class="slider" id="maxTokens" min="128" max="4096" step="128" value="1024">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="topP">Top P: <span class="slider-value" id="topPValue">0.9</span></label>
+                <div class="slider-container">
+                    <input type="range" class="slider" id="topP" min="0" max="1" step="0.01" value="0.9">
+                </div>
+                <p class="form-hint">控制生成多样性。值越低输出越集中，值越高输出越多样。</p>
+            </div>
+            
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" class="checkbox" id="streamOutput">
+                    <label class="form-label" for="streamOutput">流式输出</label>
+                </div>
+                <p class="form-hint">启用后，回复将以流式方式逐个字符显示。</p>
+            </div>
+            
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" class="checkbox" id="webSearch">
+                    <label class="form-label" for="webSearch">启用联网搜索</label>
+                </div>
+                <p class="form-hint">启用后，模型将尝试联网搜索最新信息来回答您的问题。</p>
+            </div>
+            
+            <button class="save-btn" id="saveSettingsBtn">保存设置</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM元素
+            const chatInput = document.getElementById('chatInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const chatMessages = document.getElementById('chatMessages');
+            const settingsBtn = document.getElementById('settingsBtn');
+            const webSearchBtn = document.getElementById('webSearchBtn');
+            const settingsModal = document.getElementById('settingsModal');
+            const closeModal = document.querySelector('.close-modal');
+            const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+            const newChatBtn = document.getElementById('newChatBtn');
+            const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+            const chatList = document.getElementById('chatList');
+            
+            // 滑块和值显示
+            const temperatureSlider = document.getElementById('temperature');
+            const temperatureValue = document.getElementById('temperatureValue');
+            const maxTokensSlider = document.getElementById('maxTokens');
+            const maxTokensValue = document.getElementById('maxTokensValue');
+            const topPSlider = document.getElementById('topP');
+            const topPValue = document.getElementById('topPValue');
+            
+            // 当前对话状态
+            let currentChatId = null;
+            let isWaitingForResponse = false;
+            
+            // 初始化
+            loadSettings();
+            loadChatHistory();
+            updateSliderValues();
+            
+            // 事件监听器
+            chatInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+                sendBtn.disabled = this.value.trim() === '' || isWaitingForResponse;
+            });
+            
+            chatInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!sendBtn.disabled) {
+                        sendMessage();
+                    }
+                }
+            });
+            
+            sendBtn.addEventListener('click', sendMessage);
+            
+            settingsBtn.addEventListener('click', function() {
+                settingsModal.style.display = 'flex';
+            });
+            
+            closeModal.addEventListener('click', function() {
+                settingsModal.style.display = 'none';
+            });
+            
+            saveSettingsBtn.addEventListener('click', saveSettings);
+            
+            webSearchBtn.addEventListener('click', function() {
+                const webSearchCheckbox = document.getElementById('webSearch');
+                webSearchCheckbox.checked = !webSearchCheckbox.checked;
+                this.classList.toggle('active', webSearchCheckbox.checked);
+                
+                if (webSearchCheckbox.checked) {
+                    this.innerHTML = '<i class="fas fa-search"></i><span>关闭搜索</span>';
+                } else {
+                    this.innerHTML = '<i class="fas fa-search"></i><span>联网搜索</span>';
+                }
+                
+                saveSettings();
+            });
+            
+            newChatBtn.addEventListener('click', createNewChat);
+            
+            clearHistoryBtn.addEventListener('click', function() {
+                if (confirm('确定要清空所有聊天记录吗？此操作不可撤销。')) {
+                    localStorage.removeItem('chatHistory');
+                    chatList.innerHTML = '';
+                    createNewChat();
+                }
+            });
+            
+            // 滑块事件
+            temperatureSlider.addEventListener('input', function() {
+                temperatureValue.textContent = this.value;
+            });
+            
+            maxTokensSlider.addEventListener('input', function() {
+                maxTokensValue.textContent = this.value;
+            });
+            
+            topPSlider.addEventListener('input', function() {
+                topPValue.textContent = this.value;
+            });
+            
+            // 函数定义
+            function updateSliderValues() {
+                temperatureValue.textContent = temperatureSlider.value;
+                maxTokensValue.textContent = maxTokensSlider.value;
+                topPValue.textContent = topPSlider.value;
+            }
+            
+            function loadSettings() {
+                const settings = JSON.parse(localStorage.getItem('deepseekSettings')) || {};
+                
+                document.getElementById('apiKey').value = settings.apiKey || '';
+                document.getElementById('modelSelect').value = settings.model || 'deepseek-chat';
+                document.getElementById('temperature').value = settings.temperature || 0.7;
+                document.getElementById('maxTokens').value = settings.maxTokens || 1024;
+                document.getElementById('topP').value = settings.topP || 0.9;
+                document.getElementById('streamOutput').checked = settings.streamOutput !== false;
+                document.getElementById('webSearch').checked = settings.webSearch || false;
+                
+                // 更新网页搜索按钮状态
+                webSearchBtn.classList.toggle('active', settings.webSearch || false);
+                if (settings.webSearch) {
+                    webSearchBtn.innerHTML = '<i class="fas fa-search"></i><span>关闭搜索</span>';
+                }
+                
+                updateSliderValues();
+            }
+            
+            function saveSettings() {
+                const settings = {
+                    apiKey: document.getElementById('apiKey').value,
+                    model: document.getElementById('modelSelect').value,
+                    temperature: parseFloat(document.getElementById('temperature').value),
+                    maxTokens: parseInt(document.getElementById('maxTokens').value),
+                    topP: parseFloat(document.getElementById('topP').value),
+                    streamOutput: document.getElementById('streamOutput').checked,
+                    webSearch: document.getElementById('webSearch').checked
+                };
+                
+                localStorage.setItem('deepseekSettings', JSON.stringify(settings));
+                settingsModal.style.display = 'none';
+                
+                // 更新网页搜索按钮状态
+                webSearchBtn.classList.toggle('active', settings.webSearch);
+                if (settings.webSearch) {
+                    webSearchBtn.innerHTML = '<i class="fas fa-search"></i><span>关闭搜索</span>';
+                } else {
+                    webSearchBtn.innerHTML = '<i class="fas fa-search"></i><span>联网搜索</span>';
+                }
+                
+                alert('设置已保存！');
+            }
+            
+            function createNewChat() {
+                currentChatId = 'chat_' + Date.now();
+                chatMessages.innerHTML = `
+                    <div class="message assistant-message">
+                        <div class="message-header">
+                            <span>DeepSeek助手</span>
+                            <span>刚刚</span>
+                        </div>
+                        <p>您好！请问有什么我可以帮助您的？</p>
+                    </div>
+                `;
+                
+                addChatToHistory(currentChatId, '新对话');
+                
+                // 滚动到底部
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            function addChatToHistory(id, title) {
+                const chatItem = document.createElement('li');
+                chatItem.className = 'chat-item';
+                chatItem.dataset.id = id;
+                
+                chatItem.innerHTML = `
+                    <i class="fas fa-comment"></i>
+                    <span>${title}</span>
+                `;
+                
+                chatItem.addEventListener('click', function() {
+                    loadChat(id);
+                });
+                
+                chatList.appendChild(chatItem);
+                
+                // 保存到localStorage
+                saveChatToHistory(id, title);
+            }
+            
+            function saveChatToHistory(id, title) {
+                let history = JSON.parse(localStorage.getItem('chatHistory')) || [];
+                
+                // 如果已存在，先移除
+                history = history.filter(chat => chat.id !== id);
+                
+                // 添加到开头
+                history.unshift({
+                    id: id,
+                    title: title,
+                    timestamp: Date.now()
+                });
+                
+                // 只保留最近20个对话
+                if (history.length > 20) {
+                    history = history.slice(0, 20);
+                }
+                
+                localStorage.setItem('chatHistory', JSON.stringify(history));
+            }
+            
+            function loadChatHistory() {
+                const history = JSON.parse(localStorage.getItem('chatHistory')) || [];
+                
+                if (history.length === 0) {
+                    createNewChat();
+                    return;
+                }
+                
+                chatList.innerHTML = '';
+                
+                history.forEach(chat => {
+                    const chatItem = document.createElement('li');
+                    chatItem.className = 'chat-item';
+                    chatItem.dataset.id = chat.id;
+                    
+                    chatItem.innerHTML = `
+                        <i class="fas fa-comment"></i>
+                        <span>${chat.title}</span>
+                    `;
+                    
+                    chatItem.addEventListener('click', function() {
+                        loadChat(chat.id);
+                    });
+                    
+                    chatList.appendChild(chatItem);
+                });
+                
+                // 加载第一个聊天
+                loadChat(history[0].id);
+            }
+            
+            function loadChat(id) {
+                const chatData = localStorage.getItem(id);
+                if (!chatData) return;
+                
+                currentChatId = id;
+                const messages = JSON.parse(chatData);
+                
+                // 更新聊天列表中的活动项
+                document.querySelectorAll('.chat-item').forEach(item => {
+                    item.classList.remove('active');
+                    if (item.dataset.id === id) {
+                        item.classList.add('active');
+                    }
+                });
+                
+                // 渲染消息
+                chatMessages.innerHTML = '';
+                messages.forEach(message => {
+                    addMessageToChat(message.role, message.content, false);
+                });
+                
+                // 滚动到底部
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            function sendMessage() {
+                const message = chatInput.value.trim();
+                if (message === '' || isWaitingForResponse) return;
+                
+                // 添加用户消息到聊天
+                addMessageToChat('user', message, true);
+                
+                // 清空输入框
+                chatInput.value = '';
+                chatInput.style.height = 'auto';
+                sendBtn.disabled = true;
+                
+                // 显示正在输入指示器
+                const typingIndicator = document.createElement('div');
+                typingIndicator.className = 'typing-indicator';
+                typingIndicator.innerHTML = `
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                `;
+                chatMessages.appendChild(typingIndicator);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+                isWaitingForResponse = true;
+                
+                // 获取设置
+                const settings = JSON.parse(localStorage.getItem('deepseekSettings')) || {};
+                
+                // 准备API请求
+                const requestBody = {
+                    model: settings.model || 'deepseek-chat',
+                    messages: getChatHistory(),
+                    temperature: settings.temperature || 0.7,
+                    max_tokens: settings.maxTokens || 1024,
+                    top_p: settings.topP || 0.9,
+                    stream: settings.streamOutput !== false
+                };
+                
+                // 如果有联网搜索，添加到消息中
+                if (settings.webSearch) {
+                    // 在实际实现中，这里应该先进行网络搜索
+                    // 然后将搜索结果添加到消息中
+                    requestBody.messages[requestBody.messages.length - 1].content += 
+                        "\n\n[请注意：我已启用联网搜索功能，请根据最新信息回答]";
+                }
+                
+                // 调用API
+                fetch('https://api.deepseek.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${settings.apiKey}`
+                    },
+                    body: JSON.stringify(requestBody)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // 移除输入指示器
+                    chatMessages.removeChild(typingIndicator);
+                    
+                    // 添加助手回复
+                    const assistantMessage = data.choices[0].message.content;
+                    addMessageToChat('assistant', assistantMessage, true);
+                    
+                    isWaitingForResponse = false;
+                    sendBtn.disabled = false;
+                })
+                .catch(error => {
+                    // 移除输入指示器
+                    chatMessages.removeChild(typingIndicator);
+                    
+                    // 显示错误信息
+                    addMessageToChat('assistant', `抱歉，发生了错误: ${error.message}`, true);
+                    
+                    isWaitingForResponse = false;
+                    sendBtn.disabled = false;
+                });
+            }
+            
+            function getChatHistory() {
+                const messages = [];
+                const messageElements = chatMessages.querySelectorAll('.message');
+                
+                messageElements.forEach(element => {
+                    if (element.classList.contains('user-message')) {
+                        messages.push({
+                            role: 'user',
+                            content: element.querySelector('p').textContent
+                        });
+                    } else if (element.classList.contains('assistant-message')) {
+                        messages.push({
+                            role: 'assistant',
+                            content: element.querySelector('p').textContent
+                        });
+                    }
+                });
+                
+                return messages;
+            }
+            
+            function addMessageToChat(role, content, saveToStorage) {
+                const messageElement = document.createElement('div');
+                messageElement.className = `message ${role}-message`;
+                
+                const now = new Date();
+                const timeString = now.toLocaleTimeString();
+                
+                let formattedContent = content;
+                
+                // 检测代码块并格式化
+                const codeBlockRegex = /```(\w+)?\s([\s\S]*?)```/g;
+                formattedContent = formattedContent.replace(codeBlockRegex, (match, lang, code) => {
+                    return `<div class="code-block">${escapeHtml(code.trim())}</div>`;
+                });
+                
+                messageElement.innerHTML = `
+                    <div class="message-header">
+                        <span>${role === 'user' ? '您' : 'DeepSeek助手'}</span>
+                        <span>${timeString}</span>
+                    </div>
+                    <p>${formattedContent}</p>
+                    ${role === 'assistant' ? '<button class="copy-btn"><i class="fas fa-copy"></i></button>' : ''}
+                `;
+                
+                chatMessages.appendChild(messageElement);
+                
+                // 添加复制功能
+                if (role === 'assistant') {
+                    const copyBtn = messageElement.querySelector('.copy-btn');
+                    copyBtn.addEventListener('click', function() {
+                        navigator.clipboard.writeText(content)
+                            .then(() => {
+                                copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+                                setTimeout(() => {
+                                    copyBtn.innerHTML = '<i class="fas fa-copy"></i>';
+                                }, 2000);
+                            });
+                    });
+                }
+                
+                // 滚动到底部
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+                // 保存到存储
+                if (saveToStorage && currentChatId) {
+                    const messages = getChatHistory();
+                    localStorage.setItem(currentChatId, JSON.stringify(messages));
+                    
+                    // 更新聊天历史标题（使用第一条消息的前20个字符）
+                    if (messages.length > 0 && messages[0].role === 'user') {
+                        const title = messages[0].content.substring(0, 20);
+                        saveChatToHistory(currentChatId, title);
+                        
+                        // 更新聊天列表中的标题
+                        const chatItem = document.querySelector(`.chat-item[data-id="${currentChatId}"]`);
+                        if (chatItem) {
+                            chatItem.querySelector('span').textContent = title;
+                        }
+                    }
+                }
+            }
+            
+            function escapeHtml(unsafe) {
+                return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+        });
+    </script>
+</body>
+</html>
