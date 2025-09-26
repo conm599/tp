@@ -1,0 +1,54 @@
+{
+  "version": "1.1",
+  "createdAt": "2025-08-19T03:54:25.786Z",
+  "records": [
+    {
+      "id": "1",
+      "remark": "我的世界naxida",
+      "inscription": "naxida",
+      "hash": "6480f7d05fd77c1da2f28211791fd29017e6363c0d43a9a9e752851947e18a60",
+      "algorithm": "SHA-256",
+      "createdAt": "2025-08-16T21:49:34.516Z"
+    },
+    {
+      "id": "2",
+      "remark": "我的世界/ERQwq6",
+      "inscription": "ERQwq6",
+      "hash": "cbab7d3a25b2bdcfd8bc4d2fbc4b2027e9936f4768940bb988ffc6ba3838c378",
+      "algorithm": "SHA-256",
+      "seed": "",
+      "rounds": 0,
+      "encryptionOrder": [],
+      "createdAt": "2025-08-17T00:35:01.219Z"
+    },
+    {
+      "id": "3",
+      "remark": "我的世界/23uyh",
+      "inscription": "23uyh",
+      "hash": "bc89853f0877ef65aec55c64dcf2998e394f9b3a6f07dcd972fcc61f3eb1256c",
+      "algorithm": "SHA-256",
+      "seed": "",
+      "rounds": 0,
+      "encryptionOrder": [],
+      "createdAt": "2025-08-17T01:43:32.044Z"
+    },
+    {
+      "id": "4",
+      "remark": "我的世界//naxida",
+      "inscription": "naxida",
+      "hash": "83ffeb761eeaf034d0ed5dbcd0bde514c17f0f1f",
+      "algorithm": "strong",
+      "seed": "200937",
+      "rounds": 6,
+      "encryptionOrder": [
+        "MD5",
+        "MD5",
+        "MD5",
+        "SHA-256",
+        "SHA-256",
+        "SHA-1"
+      ],
+      "createdAt": "2025-08-18T00:53:27.458Z"
+    }
+  ]
+}
