@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>硅基流动语音转写测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }
+        .container { background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); max-width: 600px; margin: auto; }
+        h1 { color: #333; text-align: center; margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; }
+        input[type="password"], input[type="file"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        button { background-color: #007bff; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; width: 100%; font-size: 16px; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #result { margin-top: 30px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f9f9f9; white-space: pre-wrap; display: none; }
+        #status { margin-top: 10px; color: #666; font-style: italic; }
+        .error { color: #dc3545; }
+        .success { color: #28a745; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>硅基流动语音转写测试</h1>
+        <form id="transcribeForm">
+            <div class="form-group">
+                <label for="apiKey">API 密钥 (Bearer Token)</label>
+                <input type="password" id="apiKey" name="apiKey" required placeholder="请输入您的硅基流动API密钥 (sk-...)">
+            </div>
+            <div class="form-group">
+                <label for="audioFile">音频文件</label>
+                <input type="file" id="audioFile" name="file" accept=".flac,.mp3,.mp4,.mpeg,.mpga,.m4a,.ogg,.wav,.webm" required>
+                <small>支持格式: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, webm (文件需小于25MB)[citation:4]</small>
+            </div>
+            <button type="submit" id="submitBtn">开始转写</button>
+            <div id="status"></div>
+        </form>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        document.getElementById('transcribeForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const fileInput = document.getElementById('audioFile');
+            const submitBtn = document.getElementById('submitBtn');
+            const statusEl = document.getElementById('status');
+            const resultEl = document.getElementById('result');
+
+            // 重置状态和结果
+            statusEl.textContent = '';
+            statusEl.className = '';
+            resultEl.style.display = 'none';
+            resultEl.textContent = '';
+            submitBtn.disabled = true;
+
+            if (!apiKey) {
+                statusEl.textContent = '错误：请填写API密钥';
+                statusEl.className = 'error';
+                submitBtn.disabled = false;
+                return;
+            }
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                statusEl.textContent = '错误：请选择音频文件';
+                statusEl.className = 'error';
+                submitBtn.disabled = false;
+                return;
+            }
+
+            const file = fileInput.files[0];
+            // 可以在这里添加文件大小校验，例如限制为25MB[citation:4]
+            if (file.size > 25 * 1024 * 1024) {
+                statusEl.textContent = '错误：文件大小超过25MB限制';
+                statusEl.className = 'error';
+                submitBtn.disabled = false;
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('model', 'FunAudioLLM/SenseVoiceSmall'); // 指定模型[citation:4]
+            formData.append('file', file);
+
+            statusEl.textContent = '正在转写，请稍候...';
+            statusEl.className = '';
+
+            try {
+                const response = await fetch('https://api.siliconflow.cn/v1/audio/transcriptions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}` // 在Header中添加认证信息[citation:4][citation:10]
+                        // 'Content-Type' 头由浏览器自动设置为 multipart/form-data 并带上边界，我们不需要手动设置[citation:2][citation:5][citation:8]
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    // 如果响应状态码不是2xx，抛出错误信息
+                    throw new Error(data.error?.message || `服务器返回错误状态码: ${response.status}`);
+                }
+
+                // 显示转写结果
+                resultEl.textContent = data.text; // 响应中包含转写的文本[citation:4]
+                resultEl.style.display = 'block';
+                statusEl.textContent = '转写成功！';
+                statusEl.className = 'success';
+
+            } catch (error) {
+                console.error('转写请求失败:', error);
+                statusEl.textContent = `转写失败: ${error.message || '网络错误或服务器未响应'}`;
+                statusEl.className = 'error';
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
