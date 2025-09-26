@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>硅基流动API聊天界面</title>
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --secondary-color: #f3f4f6;
+            --accent-color: #10b981;
+            --text-color: #1f2937;
+            --light-text: #6b7280;
+            --border-color: #e5e7eb;
+            --bg-color: #ffffff;
+            --sidebar-bg: #f9fafb;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        header {
+            background-color: var(--bg-color);
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .api-key-container {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        input[type="password"] {
+            padding: 0.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            width: 300px;
+        }
+        
+        button {
+            padding: 0.5rem 1rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #4338ca;
+        }
+        
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background-color: var(--sidebar-bg);
+            padding: 1rem;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .new-chat-btn {
+            margin-bottom: 1rem;
+            background-color: var(--accent-color);
+        }
+        
+        .new-chat-btn:hover {
+            background-color: #0da271;
+        }
+        
+        .conversations-list {
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .conversation-item {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .conversation-item:hover {
+            background-color: var(--secondary-color);
+        }
+        
+        .conversation-item.active {
+            background-color: #e0e7ff;
+            color: var(--primary-color);
+        }
+        
+        .delete-conversation {
+            color: var(--light-text);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+        }
+        
+        .delete-conversation:hover {
+            background-color: #fee2e2;
+            color: #ef4444;
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            overflow: hidden;
+        }
+        
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .message {
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+        
+        .user-message {
+            background-color: #dbeafe;
+            margin-left: auto;
+        }
+        
+        .assistant-message {
+            background-color: var(--secondary-color);
+            margin-right: auto;
+        }
+        
+        .message-content {
+            word-wrap: break-word;
+        }
+        
+        .message-image {
+            max-width: 100%;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+        }
+        
+        .input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .input-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        textarea {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            resize: vertical;
+            min-height: 60px;
+        }
+        
+        .image-preview {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+            display: none;
+        }
+        
+        .upload-btn {
+            background-color: var(--light-text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+        }
+        
+        .send-btn {
+            background-color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+        }
+        
+        .model-info {
+            padding: 0.5rem;
+            background-color: #fffbeb;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #92400e;
+            border-left: 3px solid #f59e0b;
+        }
+        
+        .typing-indicator {
+            display: none;
+            padding: 0.75rem;
+            background-color: var(--secondary-color);
+            border-radius: 8px;
+            margin-right: auto;
+            margin-bottom: 1rem;
+        }
+        
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--light-text);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+        
+        .dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">硅基流动API聊天</div>
+        <div class="api-key-container">
+            <input type="password" id="api-key" placeholder="输入您的API密钥" />
+            <button id="save-api-key">保存</button>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="sidebar">
+            <button class="new-chat-btn" id="new-chat">新建对话</button>
+            <div class="conversations-list" id="conversations-list">
+                <!-- 对话列表将通过JavaScript动态生成 -->
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="model-info">
+                当前模型: THUDM/GLM-4.1V-9B-Thinking (视觉模型)
+            </div>
+            
+            <div class="messages-container" id="messages-container">
+                <div class="typing-indicator" id="typing-indicator">
+                    <div class="typing-dots">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                </div>
+                <!-- 消息将通过JavaScript动态添加 -->
+            </div>
+            
+            <div class="input-container">
+                <div class="input-row">
+                    <textarea id="message-input" placeholder="输入您的消息..."></textarea>
+                    <button class="upload-btn" id="upload-btn" title="上传图片">📷</button>
+                    <button class="send-btn" id="send-btn">发送</button>
+                </div>
+                <input type="file" id="image-upload" accept="image/*" style="display: none;" />
+                <img id="image-preview" class="image-preview" />
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 元素引用
+            const apiKeyInput = document.getElementById('api-key');
+            const saveApiKeyBtn = document.getElementById('save-api-key');
+            const newChatBtn = document.getElementById('new-chat');
+            const conversationsList = document.getElementById('conversations-list');
+            const messagesContainer = document.getElementById('messages-container');
+            const messageInput = document.getElementById('message-input');
+            const uploadBtn = document.getElementById('upload-btn');
+            const imageUpload = document.getElementById('image-upload');
+            const imagePreview = document.getElementById('image-preview');
+            const sendBtn = document.getElementById('send-btn');
+            const typingIndicator = document.getElementById('typing-indicator');
+            
+            // 状态变量
+            let currentConversationId = null;
+            let conversations = {};
+            let selectedImage = null;
+            
+            // 初始化：从localStorage加载API密钥和对话历史
+            const savedApiKey = localStorage.getItem('siliconflow_api_key');
+            if (savedApiKey) {
+                apiKeyInput.value = savedApiKey;
+            }
+            
+            const savedConversations = localStorage.getItem('siliconflow_conversations');
+            if (savedConversations) {
+                conversations = JSON.parse(savedConversations);
+                renderConversationsList();
+                
+                // 尝试加载最后一个对话
+                const lastConversationId = localStorage.getItem('siliconflow_last_conversation');
+                if (lastConversationId && conversations[lastConversationId]) {
+                    loadConversation(lastConversationId);
+                } else if (Object.keys(conversations).length > 0) {
+                    // 加载第一个对话
+                    const firstConversationId = Object.keys(conversations)[0];
+                    loadConversation(firstConversationId);
+                }
+            }
+            
+            // 如果没有对话，创建一个新对话
+            if (Object.keys(conversations).length === 0) {
+                createNewConversation();
+            }
+            
+            // 事件监听器
+            saveApiKeyBtn.addEventListener('click', saveApiKey);
+            newChatBtn.addEventListener('click', createNewConversation);
+            uploadBtn.addEventListener('click', () => imageUpload.click());
+            imageUpload.addEventListener('change', handleImageUpload);
+            sendBtn.addEventListener('click', sendMessage);
+            messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            // 保存API密钥
+            function saveApiKey() {
+                const apiKey = apiKeyInput.value.trim();
+                if (apiKey) {
+                    localStorage.setItem('siliconflow_api_key', apiKey);
+                    alert('API密钥已保存！');
+                } else {
+                    alert('请输入有效的API密钥');
+                }
+            }
+            
+            // 创建新对话
+            function createNewConversation() {
+                const conversationId = 'conv_' + Date.now();
+                currentConversationId = conversationId;
+                
+                conversations[conversationId] = {
+                    id: conversationId,
+                    title: '新对话',
+                    messages: [],
+                    createdAt: new Date().toISOString()
+                };
+                
+                saveConversations();
+                renderConversationsList();
+                clearMessages();
+                
+                // 设置新对话为活跃状态
+                const conversationItems = document.querySelectorAll('.conversation-item');
+                conversationItems.forEach(item => item.classList.remove('active'));
+                
+                const newItem = document.querySelector(`[data-id="${conversationId}"]`);
+                if (newItem) {
+                    newItem.classList.add('active');
+                }
+                
+                localStorage.setItem('siliconflow_last_conversation', conversationId);
+            }
+            
+            // 加载对话
+            function loadConversation(conversationId) {
+                if (!conversations[conversationId]) return;
+                
+                currentConversationId = conversationId;
+                clearMessages();
+                
+                // 更新对话列表中的活跃状态
+                const conversationItems = document.querySelectorAll('.conversation-item');
+                conversationItems.forEach(item => {
+                    if (item.getAttribute('data-id') === conversationId) {
+                        item.classList.add('active');
+                    } else {
+                        item.classList.remove('active');
+                    }
+                });
+                
+                // 显示消息
+                conversations[conversationId].messages.forEach(message => {
+                    addMessageToUI(message.role, message.content, message.image);
+                });
+                
+                localStorage.setItem('siliconflow_last_conversation', conversationId);
+            }
+            
+            // 删除对话
+            function deleteConversation(conversationId, event) {
+                event.stopPropagation(); // 防止触发加载对话
+                
+                if (confirm('确定要删除这个对话吗？此操作不可撤销。')) {
+                    delete conversations[conversationId];
+                    saveConversations();
+                    
+                    if (currentConversationId === conversationId) {
+                        // 如果删除的是当前对话，切换到另一个对话或创建新对话
+                        if (Object.keys(conversations).length > 0) {
+                            const firstConversationId = Object.keys(conversations)[0];
+                            loadConversation(firstConversationId);
+                        } else {
+                            createNewConversation();
+                        }
+                    }
+                    
+                    renderConversationsList();
+                }
+            }
+            
+            // 渲染对话列表
+            function renderConversationsList() {
+                conversationsList.innerHTML = '';
+                
+                Object.values(conversations)
+                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                    .forEach(conversation => {
+                        const item = document.createElement('div');
+                        item.className = 'conversation-item';
+                        if (conversation.id === currentConversationId) {
+                            item.classList.add('active');
+                        }
+                        item.setAttribute('data-id', conversation.id);
+                        
+                        const title = document.createElement('div');
+                        title.textContent = conversation.title.length > 20 
+                            ? conversation.title.substring(0, 20) + '...' 
+                            : conversation.title;
+                        
+                        const deleteBtn = document.createElement('span');
+                        deleteBtn.className = 'delete-conversation';
+                        deleteBtn.innerHTML = '×';
+                        deleteBtn.addEventListener('click', (e) => deleteConversation(conversation.id, e));
+                        
+                        item.appendChild(title);
+                        item.appendChild(deleteBtn);
+                        item.addEventListener('click', () => loadConversation(conversation.id));
+                        
+                        conversationsList.appendChild(item);
+                    });
+            }
+            
+            // 保存对话到localStorage
+            function saveConversations() {
+                localStorage.setItem('siliconflow_conversations', JSON.stringify(conversations));
+            }
+            
+            // 清空消息显示区域
+            function clearMessages() {
+                // 保留打字指示器
+                const messages = messagesContainer.querySelectorAll('.message');
+                messages.forEach(msg => msg.remove());
+            }
+            
+            // 添加消息到UI
+            function addMessageToUI(role, content, imageData = null) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${role}-message`;
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                contentDiv.textContent = content;
+                
+                messageDiv.appendChild(contentDiv);
+                
+                if (imageData && role === 'user') {
+                    const img = document.createElement('img');
+                    img.src = imageData;
+                    img.className = 'message-image';
+                    messageDiv.appendChild(img);
+                }
+                
+                // 在打字指示器之前插入新消息
+                messagesContainer.insertBefore(messageDiv, typingIndicator);
+                
+                // 滚动到底部
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+            
+            // 处理图片上传
+            function handleImageUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                if (!file.type.startsWith('image/')) {
+                    alert('请上传图片文件');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    selectedImage = e.target.result;
+                    imagePreview.src = selectedImage;
+                    imagePreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            // 发送消息
+            async function sendMessage() {
+                const message = messageInput.value.trim();
+                const apiKey = apiKeyInput.value.trim();
+                
+                if (!apiKey) {
+                    alert('请先输入并保存API密钥');
+                    return;
+                }
+                
+                if (!message && !selectedImage) {
+                    alert('请输入消息或上传图片');
+                    return;
+                }
+                
+                // 添加到UI
+                addMessageToUI('user', message, selectedImage);
+                
+                // 保存到当前对话
+                conversations[currentConversationId].messages.push({
+                    role: 'user',
+                    content: message,
+                    image: selectedImage,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // 如果是第一条消息，更新对话标题
+                if (conversations[currentConversationId].messages.length === 1) {
+                    conversations[currentConversationId].title = message.substring(0, 30) || '图片对话';
+                    renderConversationsList();
+                }
+                
+                // 清空输入
+                messageInput.value = '';
+                selectedImage = null;
+                imagePreview.style.display = 'none';
+                imageUpload.value = '';
+                
+                // 显示打字指示器
+                typingIndicator.style.display = 'block';
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                try {
+                    // 准备请求数据
+                    const requestData = {
+                        model: "THUDM/GLM-4.1V-9B-Thinking",
+                        messages: []
+                    };
+                    
+                    // 添加对话历史
+                    conversations[currentConversationId].messages.forEach(msg => {
+                        if (msg.image) {
+                            // 对于带有图片的消息，使用多模态格式
+                            requestData.messages.push({
+                                role: msg.role,
+                                content: [
+                                    { type: "text", text: msg.content },
+                                    { type: "image_url", image_url: { url: msg.image } }
+                                ]
+                            });
+                        } else {
+                            // 对于纯文本消息
+                            requestData.messages.push({
+                                role: msg.role,
+                                content: msg.content
+                            });
+                        }
+                    });
+                    
+                    // 发送请求到硅基流动API
+                    const response = await fetch('https://api.siliconflow.cn/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(requestData)
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error?.message || `API请求失败: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    const assistantMessage = data.choices[0].message.content;
+                    
+                    // 隐藏打字指示器
+                    typingIndicator.style.display = 'none';
+                    
+                    // 添加到UI
+                    addMessageToUI('assistant', assistantMessage);
+                    
+                    // 保存到对话历史
+                    conversations[currentConversationId].messages.push({
+                        role: 'assistant',
+                        content: assistantMessage,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    // 保存对话
+                    saveConversations();
+                    
+                } catch (error) {
+                    // 隐藏打字指示器
+                    typingIndicator.style.display = 'none';
+                    
+                    // 显示错误消息
+                    const errorMessage = `错误: ${error.message}`;
+                    addMessageToUI('assistant', errorMessage);
+                    
+                    // 保存错误消息到历史
+                    conversations[currentConversationId].messages.push({
+                        role: 'assistant',
+                        content: errorMessage,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    saveConversations();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
