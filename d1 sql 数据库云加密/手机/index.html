@@ -1,0 +1,1945 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>铭文哈希工具 - Cloudflare D1集成版</title>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary: #3B82F6;
+            --secondary: #10B981;
+            --d1: #FF9A3D;
+            --dark: #0f172a;
+            --light: #f8fafc;
+        }
+        
+        body {
+            font-family: 'Inter', 'system-ui', sans-serif;
+            color: var(--light);
+            min-height: 100vh;
+            overflow-x: hidden;
+            margin: 0;
+        }
+        
+        #video-bg {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            min-width: 100%;
+            min-height: 100%;
+            z-index: -1;
+            object-fit: cover;
+        }
+        
+        .video-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            z-index: -1;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 16px;
+        }
+        
+        .card-shadow {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .copy-btn {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .copy-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .d1-badge {
+            position: relative;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            background: rgba(243, 128, 32, 0.15);
+            border: 1px solid rgba(243, 128, 32, 0.3);
+            color: var(--d1);
+        }
+        
+        .d1-badge.online::after {
+            content: '';
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 8px;
+            height: 8px;
+            background-color: var(--secondary);
+            border-radius: 50%;
+        }
+        
+        .d1-status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        
+        .d1-status-online {
+            background-color: var(--secondary);
+        }
+        
+        .d1-status-offline {
+            background-color: #EF4444;
+        }
+        
+        .encryption-step {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            margin-right: 6px;
+            margin-bottom: 6px;
+        }
+        
+        .notification {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .notification.success {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--secondary);
+        }
+        
+        .notification.error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #EF4444;
+        }
+        
+        .notification.info {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: var(--primary);
+        }
+        
+        .notification.d1 {
+            background: rgba(243, 128, 32, 0.2);
+            border: 1px solid rgba(243, 128, 32, 0.3);
+            color: var(--d1);
+        }
+        
+        .tab {
+            min-height: calc(100vh - 80px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+        
+        input, textarea, select {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--light);
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            padding: 10px 14px;
+            width: 100%;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, #6366F1 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(59, 130, 246, 0.4);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--secondary) 0%, #06B6D4 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.4);
+        }
+        
+        .btn-d1 {
+            background: linear-gradient(135deg, #F97316 0%, #F59E0B 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .btn-d1:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(249, 115, 22, 0.4);
+        }
+        
+        .algorithm-btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .algorithm-btn:hover, .algorithm-btn.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: var(--primary);
+        }
+        
+        .result-card {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            padding: 16px;
+        }
+        
+        .result-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-radius: 16px;
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        
+        .nav-link {
+            color: #cbd5e1;
+            transition: color 0.3s;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            color: var(--primary);
+        }
+        
+        .records-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .records-table th {
+            background: rgba(30, 41, 59, 0.7);
+            text-align: left;
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .records-table td {
+            padding: 12px 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .records-table tr:hover {
+            background: rgba(30, 41, 59, 0.4);
+        }
+        
+        .pagination-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .pagination-btn:hover:not(:disabled) {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: var(--primary);
+        }
+        
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 70px;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.95);
+            z-index: 100;
+            padding: 20px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .mobile-menu.active {
+            display: block;
+        }
+        
+        .mobile-menu a {
+            display: block;
+            padding: 12px 20px;
+            color: #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+        }
+        
+        .mobile-menu a:hover, .mobile-menu a.active {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--primary);
+        }
+        
+        .file-upload-btn {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+        
+        .file-upload-btn input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        dark: '#0f172a',
+                        light: '#f8fafc',
+                        d1: '#FF9A3D',
+                        cloudflare: '#F38020'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <!-- 视频背景 -->
+    <video autoplay muted loop id="video-bg">
+        <source src="1.mp4" type="video/mp4">
+        您的浏览器不支持视频标签。
+    </video>
+    <div class="video-overlay"></div>
+
+    <!-- 导航栏 -->
+    <header class="fixed top-0 left-0 right-0 glass-effect shadow-md z-50">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa fa-shield text-primary text-2xl"></i>
+                <h1 class="text-xl font-bold">铭文哈希工具</h1>
+            </div>
+            
+            <nav class="hidden md:flex items-center space-x-6">
+                <a href="#encrypt" class="nav-link active">加密</a>
+                <a href="#database" class="nav-link">记录</a>
+                <a href="#decrypt" class="nav-link">查询</a>
+            </nav>
+            
+            <div class="flex items-center space-x-4">
+                <div id="d1Status" class="d1-badge flex items-center">
+                    <span class="d1-status-indicator d1-status-offline"></span>
+                    <span>D1 离线</span>
+                </div>
+                
+                <button id="mobileMenuBtn" class="md:hidden text-white hover:text-primary">
+                    <i class="fa fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 移动端菜单 -->
+    <div id="mobileMenu" class="mobile-menu">
+        <a href="#encrypt" class="active">加密</a>
+        <a href="#database">记录</a>
+        <a href="#decrypt">查询</a>
+    </div>
+
+    <!-- 主内容区 -->
+    <main class="pt-16">
+        <!-- 标签页容器 -->
+        <div id="tabsContainer">
+            <!-- 加密标签页 -->
+            <section id="encrypt" class="tab">
+                <div class="container mx-auto max-w-4xl">
+                    <div class="text-center mb-10">
+                        <h2 class="text-3xl md:text-4xl font-bold mb-3 text-white">铭文哈希加密</h2>
+                        <p class="text-white/80 max-w-2xl mx-auto">使用多种算法保护您的铭文内容</p>
+                    </div>
+                    
+                    <div class="glass-effect p-6 md:p-8 card-shadow">
+                        <div class="mb-6">
+                            <label for="remark" class="block text-sm font-medium mb-2 text-white/80">备注（可选）</label>
+                            <div class="relative">
+                                <input 
+                                    type="text" 
+                                    id="remark" 
+                                    class="w-full bg-white/5 text-white"
+                                    placeholder="输入备注以便后续检索..."
+                                >
+                            </div>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label for="inscription" class="block text-sm font-medium mb-2 text-white/80">输入铭文内容</label>
+                            <div class="relative">
+                                <textarea 
+                                    id="inscription" 
+                                    rows="4" 
+                                    class="w-full bg-white/5 text-white"
+                                    placeholder="请输入需要加密的铭文内容..."
+                                ></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium mb-2 text-white/80">选择哈希算法</label>
+                            <div class="flex flex-wrap gap-3 mb-4">
+                                <button class="algorithm-btn active" data-algorithm="SHA-256">SHA-256</button>
+                                <button class="algorithm-btn" data-algorithm="SHA-1">SHA-1</button>
+                                <button class="algorithm-btn" data-algorithm="MD5">MD5</button>
+                                <button class="algorithm-btn" data-algorithm="strong">强力加密</button>
+                            </div>
+                            
+                            <div id="seedInputContainer" class="hidden mb-4">
+                                <div class="flex flex-col md:flex-row gap-4">
+                                    <div class="flex-1">
+                                        <label for="encryptionSeed" class="block text-sm font-medium mb-1 text-white/80">加密种子（可选）</label>
+                                        <div class="relative">
+                                            <input 
+                                                type="text" 
+                                                id="encryptionSeed" 
+                                                class="w-full bg-white/5 text-white"
+                                                placeholder="输入数字种子（留空则随机）..."
+                                            >
+                                        </div>
+                                    </div>
+                                    <div class="w-full md:w-40">
+                                        <label for="encryptionRounds" class="block text-sm font-medium mb-1 text-white/80">加密轮次</label>
+                                        <select id="encryptionRounds" class="w-full bg-white/5 text-white">
+                                            <option value="2">2轮</option>
+                                            <option value="3" selected>3轮</option>
+                                            <option value="4">4轮</option>
+                                            <option value="5">5轮</option>
+                                            <option value="6">6轮</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <p class="text-xs mt-1 text-white/60">
+                                    <i class="fa fa-info-circle mr-1"></i> 相同的种子将生成相同的加密顺序，方便解密验证
+                                </p>
+                            </div>
+                            
+                            <div id="encryptionOrderPreview" class="hidden p-4 rounded-lg bg-white/5">
+                                <p class="text-sm font-medium mb-2 text-white/80">加密顺序：</p>
+                                <div id="orderSteps" class="flex flex-wrap gap-2"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-center mb-6">
+                            <button id="encryptBtn" class="btn-primary flex items-center">
+                                <i class="fa fa-lock mr-2"></i> 生成哈希值
+                            </button>
+                        </div>
+                        
+                        <div id="hashResult" class="hidden">
+                            <label class="block text-sm font-medium mb-2 text-white/80">哈希结果</label>
+                            <div class="relative">
+                                <textarea 
+                                    id="hashOutput" 
+                                    rows="3" 
+                                    class="w-full bg-white/5 text-white"
+                                    readonly
+                                ></textarea>
+                                <button class="copy-btn absolute right-3 bottom-3 text-gray-400 hover:text-primary" 
+                                        data-target="hashOutput" 
+                                        data-type="哈希值">
+                                    <i class="fa fa-copy"></i>
+                                </button>
+                            </div>
+                            
+                            <div id="encryptionInfo" class="mt-4 p-4 rounded-lg bg-white/5">
+                                <p class="mb-1 text-white"><span class="font-medium">使用算法：</span><span id="usedAlgorithmText">-</span></p>
+                                <p id="seedInfo" class="hidden mb-1 text-white"><span class="font-medium">加密种子：</span>
+                                    <span id="seedValue">-</span>
+                                    <button class="copy-btn ml-2 text-gray-400 hover:text-primary" 
+                                            data-text="" 
+                                            data-type="种子号"
+                                            id="seedValueCopyBtn">
+                                        <i class="fa fa-copy"></i>
+                                    </button>
+                                </p>
+                                <p id="roundsInfo" class="hidden text-white"><span class="font-medium">加密轮次：</span><span id="roundsValue">-</span></p>
+                            </div>
+                        </div>
+                        
+                        <div id="saveToDbSection" class="hidden mt-6 pt-6 border-t border-gray-700">
+                            <div class="flex flex-col md:flex-row justify-between items-center">
+                                <div class="flex items-center mb-4 md:mb-0">
+                                    <label class="inline-flex items-center mr-4 text-white">
+                                        <input type="radio" name="storageLocation" value="local" checked class="form-radio text-primary">
+                                        <span class="ml-2">保存到本地</span>
+                                    </label>
+                                    <label class="inline-flex items-center text-white">
+                                        <input type="radio" name="storageLocation" value="d1" class="form-radio text-cloudflare">
+                                        <span class="ml-2">保存到Cloudflare D1</span>
+                                    </label>
+                                </div>
+                                
+                                <button id="saveToDbBtn" class="btn-secondary flex items-center">
+                                    <i class="fa fa-database mr-2"></i> 保存记录
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 记录标签页 -->
+            <section id="database" class="tab hidden">
+                <div class="container mx-auto max-w-6xl">
+                    <div class="text-center mb-10">
+                        <h2 class="text-3xl md:text-4xl font-bold mb-3 text-white">记录管理</h2>
+                        <p class="text-white/80 max-w-2xl mx-auto">查看和管理您的加密记录</p>
+                    </div>
+                    
+                    <div class="glass-effect p-6 md:p-8 card-shadow">
+                        <div class="flex flex-wrap gap-3 mb-6">
+                            <button id="d1ConnectBtn" class="btn-d1 flex items-center">
+                                <i class="fa fa-plug mr-2"></i> 连接D1数据库
+                            </button>
+                            <button id="uploadToD1Btn" class="btn-d1 flex items-center">
+                                <i class="fa fa-cloud-upload mr-2"></i> 上传到D1
+                            </button>
+                            <button id="syncD1Btn" class="btn-d1 flex items-center">
+                                <i class="fa fa-sync mr-2"></i> 从D1同步
+                            </button>
+                            <button id="clearD1Btn" class="btn-d1 bg-red-500/10 text-red-300 hover:bg-red-500/20 flex items-center">
+                                <i class="fa fa-trash mr-2"></i> 清空D1
+                            </button>
+                        </div>
+                        
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                            <h3 class="text-lg font-semibold text-white">存储的铭文记录</h3>
+                            <div class="w-full md:w-auto flex gap-2">
+                                <div class="relative flex-grow md:flex-grow-0 md:w-64">
+                                    <input 
+                                        type="text" 
+                                        id="searchRecords" 
+                                        placeholder="搜索记录..." 
+                                        class="w-full pl-10 bg-white/5 text-white"
+                                    >
+                                    <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                                </div>
+                                
+                                <button id="exportBtn" class="btn-d1 flex items-center">
+                                    <i class="fa fa-download mr-1"></i> 导出
+                                </button>
+                                
+                                <button id="clearAllBtn" class="btn-d1 bg-red-500/10 text-red-300 hover:bg-red-500/20 flex items-center">
+                                    <i class="fa fa-trash mr-1"></i> 清空
+                                </button>
+                                
+                                <!-- 本地上传按钮 -->
+                                <div class="file-upload-btn">
+                                    <button class="btn-d1 flex items-center">
+                                        <i class="fa fa-upload mr-1"></i> 导入
+                                    </button>
+                                    <input type="file" id="importFile" accept=".json">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="recordsList" class="overflow-x-auto rounded-lg">
+                            <table class="records-table min-w-full">
+                                <thead>
+                                    <tr>
+                                        <th class="rounded-tl-lg text-white">ID</th>
+                                        <th class="text-white">备注</th>
+                                        <th class="text-white">铭文内容</th>
+                                        <th class="text-white">哈希算法</th>
+                                        <th class="text-white">种子/轮次</th>
+                                        <th class="text-white">哈希值</th>
+                                        <th class="text-white">日期</th>
+                                        <th class="rounded-tr-lg text-white">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recordsTableBody">
+                                    <tr class="text-center">
+                                        <td colspan="8" class="px-4 py-8">
+                                            <div class="flex flex-col items-center">
+                                                <i class="fa fa-database text-4xl mb-3 text-gray-600"></i>
+                                                <p class="text-white">暂无记录，请先生成并保存铭文</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="mt-6 flex justify-between items-center">
+                            <div class="text-sm text-white">显示 <span id="shownRecords">0</span> 条，共 <span id="totalRecords">0</span> 条</div>
+                            <div class="flex items-center space-x-2">
+                                <button id="prevPage" class="pagination-btn text-white" disabled>
+                                    <i class="fa fa-chevron-left"></i> 上一页
+                                </button>
+                                <span id="pageInfo" class="text-sm text-white">第 1 页</span>
+                                <button id="nextPage" class="pagination-btn text-white" disabled>
+                                    下一页 <i class="fa fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 解密/查询标签页 -->
+            <section id="decrypt" class="tab hidden">
+                <div class="container mx-auto max-w-4xl">
+                    <div class="text-center mb-10">
+                        <h2 class="text-3xl md:text-4xl font-bold mb-3 text-white">哈希查询</h2>
+                        <p class="text-white/80 max-w-2xl mx-auto">根据备注、铭文或哈希值查找记录</p>
+                    </div>
+                    
+                    <div class="glass-effect p-6 md:p-8 card-shadow">
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium mb-2 text-white/80">查询方式</label>
+                            <div class="flex flex-wrap gap-3 mb-4">
+                                <button class="algorithm-btn active" data-type="remark">通过备注查询</button>
+                                <button class="algorithm-btn" data-type="inscription">通过铭文内容查询</button>
+                                <button class="algorithm-btn" data-type="hash">通过哈希值查询</button>
+                            </div>
+                            
+                            <div id="querySeedContainer" class="mb-4 hidden">
+                                <label for="querySeed" class="block text-sm font-medium mb-1 text-white/80">加密种子（如使用强力加密）</label>
+                                <div class="relative">
+                                    <input 
+                                        type="text" 
+                                        id="querySeed" 
+                                        class="w-full bg-white/5 text-white"
+                                        placeholder="输入加密时使用的种子（如适用）..."
+                                    >
+                                </div>
+                            </div>
+                            
+                            <div class="relative">
+                                <textarea 
+                                    id="queryInput" 
+                                    rows="3" 
+                                    class="w-full bg-white/5 text-white"
+                                    placeholder="请输入备注进行查询（支持模糊搜索）..."
+                                ></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-center mb-6">
+                            <button id="queryBtn" class="btn-primary flex items-center">
+                                <i class="fa fa-search mr-2"></i> 开始查询
+                            </button>
+                        </div>
+                        
+                        <div id="queryResult" class="hidden">
+                            <h3 class="text-lg font-semibold mb-3 text-white">查询结果 <span id="resultCount" class="text-sm font-normal text-white/60"></span></h3>
+                            <div id="resultsContainer" class="space-y-4">
+                                <!-- 结果将通过JavaScript动态插入 -->
+                            </div>
+                        </div>
+                        
+                        <div id="noResult" class="hidden text-center p-6 border border-gray-700 rounded-lg bg-white/5">
+                            <i class="fa fa-search text-4xl mb-3 text-gray-600"></i>
+                            <p class="text-white">未找到匹配的记录</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+    
+    <!-- 通知提示 -->
+    <div id="notification" class="notification">
+        <div class="flex items-center">
+            <i class="fa fa-info-circle mr-3 text-xl"></i>
+            <span id="notification-message"></span>
+        </div>
+    </div>
+    
+    <!-- D1 配置模态框 -->
+    <div id="d1ConfigModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-white">Cloudflare D1 Workers 配置</h3>
+                <button id="closeD1Modal" class="text-gray-400 hover:text-white">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium mb-2 text-white/80">Workers 服务 URL</label>
+                <input 
+                    type="text" 
+                    id="d1WorkerUrl" 
+                    class="w-full bg-white/5 text-white p-2 rounded"
+                    placeholder="https://d1-proxy-service.your-domain.workers.dev"
+                >
+                <p class="text-xs mt-1 text-white/60">
+                    <i class="fa fa-info-circle mr-1"></i> 请填写您部署的 D1 代理 Workers 服务地址
+                </p>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button id="saveD1Config" class="btn-d1">
+                    保存配置
+                </button>
+                <button id="testD1Connection" class="btn-primary">
+                    测试连接
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局状态管理
+        const state = {
+            currentTab: 'encrypt',
+            hashAlgorithm: 'SHA-256',
+            queryType: 'remark',
+            records: JSON.parse(localStorage.getItem('inscriptionRecords')) || [],
+            currentPage: 1,
+            recordsPerPage: 5,
+            encryptionOrder: [],
+            d1Config: JSON.parse(localStorage.getItem('d1Config')) || {},
+            d1Connected: false,
+            autoLoginAttempted: false
+        };
+        
+        // DOM 元素
+        const elements = {
+            tabsContainer: document.getElementById('tabsContainer'),
+            encryptTab: document.getElementById('encrypt'),
+            databaseTab: document.getElementById('database'),
+            decryptTab: document.getElementById('decrypt'),
+            d1Status: document.getElementById('d1Status'),
+            d1ConnectBtn: document.getElementById('d1ConnectBtn'),
+            uploadToD1Btn: document.getElementById('uploadToD1Btn'),
+            syncD1Btn: document.getElementById('syncD1Btn'),
+            clearD1Btn: document.getElementById('clearD1Btn'),
+            d1ConfigModal: document.getElementById('d1ConfigModal'),
+            d1WorkerUrl: document.getElementById('d1WorkerUrl'),
+            saveD1Config: document.getElementById('saveD1Config'),
+            testD1Connection: document.getElementById('testD1Connection'),
+            closeD1Modal: document.getElementById('closeD1Modal'),
+            encryptBtn: document.getElementById('encryptBtn'),
+            remarkInput: document.getElementById('remark'),
+            inscriptionInput: document.getElementById('inscription'),
+            hashOutput: document.getElementById('hashOutput'),
+            hashResult: document.getElementById('hashResult'),
+            hashAlgorithms: document.querySelectorAll('.algorithm-btn[data-algorithm]'),
+            saveToDbBtn: document.getElementById('saveToDbBtn'),
+            saveToDbSection: document.getElementById('saveToDbSection'),
+            seedInputContainer: document.getElementById('seedInputContainer'),
+            encryptionSeed: document.getElementById('encryptionSeed'),
+            encryptionRounds: document.getElementById('encryptionRounds'),
+            encryptionOrderPreview: document.getElementById('encryptionOrderPreview'),
+            orderSteps: document.getElementById('orderSteps'),
+            encryptionInfo: document.getElementById('encryptionInfo'),
+            usedAlgorithmText: document.getElementById('usedAlgorithmText'),
+            seedInfo: document.getElementById('seedInfo'),
+            seedValue: document.getElementById('seedValue'),
+            seedValueCopyBtn: document.getElementById('seedValueCopyBtn'),
+            roundsInfo: document.getElementById('roundsInfo'),
+            roundsValue: document.getElementById('roundsValue'),
+            querySeedContainer: document.getElementById('querySeedContainer'),
+            querySeed: document.getElementById('querySeed'),
+            recordsTableBody: document.getElementById('recordsTableBody'),
+            shownRecords: document.getElementById('shownRecords'),
+            totalRecords: document.getElementById('totalRecords'),
+            prevPageBtn: document.getElementById('prevPage'),
+            nextPageBtn: document.getElementById('nextPage'),
+            pageInfo: document.getElementById('pageInfo'),
+            searchRecordsInput: document.getElementById('searchRecords'),
+            clearAllBtn: document.getElementById('clearAllBtn'),
+            exportBtn: document.getElementById('exportBtn'),
+            importFile: document.getElementById('importFile'),
+            queryTypeButtons: document.querySelectorAll('.algorithm-btn[data-type]'),
+            queryInput: document.getElementById('queryInput'),
+            queryBtn: document.getElementById('queryBtn'),
+            queryResult: document.getElementById('queryResult'),
+            resultsContainer: document.getElementById('resultsContainer'),
+            resultCount: document.getElementById('resultCount'),
+            noResult: document.getElementById('noResult'),
+            mobileMenuBtn: document.getElementById('mobileMenuBtn'),
+            mobileMenu: document.getElementById('mobileMenu'),
+            notification: document.getElementById('notification'),
+            notificationMessage: document.getElementById('notification-message')
+        };
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', init);
+        function init() {
+            setupEventListeners();
+            renderRecords();
+            updateD1Status();
+            
+            // 加载已有的Workers配置
+            if (state.d1Config.workerUrl) {
+                elements.d1WorkerUrl.value = state.d1Config.workerUrl;
+            }
+            
+            // 设置默认标签页
+            switchTab('encrypt');
+            
+            // 自动登录D1
+            autoLoginD1();
+        }
+        
+        // 自动登录D1
+        async function autoLoginD1() {
+            if (state.autoLoginAttempted) return;
+            
+            if (state.d1Config.workerUrl && state.d1Connected === false) {
+                state.autoLoginAttempted = true;
+                showNotification('正在自动连接D1数据库...', 'info');
+                
+                try {
+                    // 通过代理发送测试查询
+                    const result = await d1ProxyRequest('all', 'SELECT name FROM sqlite_schema WHERE type="table";');
+                    
+                    if (result && result.results) {
+                        state.d1Connected = true;
+                        updateD1Status();
+                        showNotification('自动连接D1数据库成功', 'success');
+                    }
+                } catch (error) {
+                    console.error('D1自动连接失败:', error);
+                }
+            }
+        }
+        
+        // 更新D1连接状态
+        function updateD1Status() {
+            const statusEl = elements.d1Status.querySelector('.d1-status-indicator');
+            const statusText = elements.d1Status.querySelector('span:last-child');
+            
+            if (state.d1Connected) {
+                statusEl.classList.remove('d1-status-offline');
+                statusEl.classList.add('d1-status-online');
+                statusText.textContent = 'D1 已连接';
+                elements.d1Status.classList.add('online');
+            } else {
+                statusEl.classList.remove('d1-status-online');
+                statusEl.classList.add('d1-status-offline');
+                statusText.textContent = 'D1 离线';
+                elements.d1Status.classList.remove('online');
+            }
+        }
+        
+        // D1代理请求函数（通过Workers服务）
+        async function d1ProxyRequest(action, sql, params = []) {
+            if (!state.d1Config.workerUrl) {
+                showNotification('请先配置Workers服务URL', 'error');
+                throw new Error('Workers服务URL未配置');
+            }
+            
+            try {
+                const response = await fetch(state.d1Config.workerUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, query: sql, params })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`请求失败: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    return data.data;
+                } else {
+                    throw new Error(data.error || '数据库操作失败');
+                }
+            } catch (error) {
+                console.error('代理请求失败:', error);
+                showNotification(`代理请求失败: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+        
+        // 事件监听
+        function setupEventListeners() {
+            // 移动端菜单
+            elements.mobileMenuBtn.addEventListener('click', () => {
+                elements.mobileMenu.classList.toggle('active');
+            });
+            
+            // 移动端菜单项点击
+            elements.mobileMenu.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => {
+                    elements.mobileMenu.classList.remove('active');
+                });
+            });
+            
+            // D1相关事件
+            elements.d1ConnectBtn.addEventListener('click', () => {
+                elements.d1ConfigModal.classList.remove('hidden');
+            });
+            
+            elements.closeD1Modal.addEventListener('click', () => {
+                elements.d1ConfigModal.classList.add('hidden');
+            });
+            
+            elements.saveD1Config.addEventListener('click', saveD1Config);
+            elements.testD1Connection.addEventListener('click', testD1Connection);
+            elements.uploadToD1Btn.addEventListener('click', uploadToD1);
+            elements.syncD1Btn.addEventListener('click', syncFromD1);
+            elements.clearD1Btn.addEventListener('click', clearD1Database);
+            
+            // 标签切换
+            document.querySelectorAll('a[href^="#"]').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const tabId = this.getAttribute('href').substring(1);
+                    switchTab(tabId);
+                });
+            });
+            
+            // 哈希算法选择
+            elements.hashAlgorithms.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    elements.hashAlgorithms.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    state.hashAlgorithm = btn.dataset.algorithm;
+                    
+                    if (state.hashAlgorithm === 'strong') {
+                        elements.seedInputContainer.classList.remove('hidden');
+                        generateEncryptionOrder();
+                    } else {
+                        elements.seedInputContainer.classList.add('hidden');
+                        elements.encryptionOrderPreview.classList.add('hidden');
+                    }
+                });
+            });
+            
+            // 查询类型选择
+            elements.queryTypeButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    elements.queryTypeButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    state.queryType = btn.dataset.type;
+                    
+                    switch(state.queryType) {
+                        case 'remark':
+                            elements.queryInput.placeholder = "请输入备注进行查询（支持模糊搜索）...";
+                            elements.querySeedContainer.classList.add('hidden');
+                            break;
+                        case 'inscription':
+                            elements.queryInput.placeholder = "请输入铭文内容进行查询...";
+                            elements.querySeedContainer.classList.add('hidden');
+                            break;
+                        case 'hash':
+                            elements.queryInput.placeholder = "请输入哈希值进行查询...";
+                            elements.querySeedContainer.classList.remove('hidden');
+                            break;
+                    }
+                });
+            });
+            
+            // 加密按钮
+            elements.encryptBtn.addEventListener('click', handleEncryption);
+            
+            // 保存按钮
+            elements.saveToDbBtn.addEventListener('click', saveToStorage);
+            
+            // 查询按钮
+            elements.queryBtn.addEventListener('click', performQuery);
+            
+            // 清空记录按钮
+            elements.clearAllBtn.addEventListener('click', clearAllRecords);
+            
+            // 分页按钮
+            elements.prevPageBtn.addEventListener('click', () => changePage(-1));
+            elements.nextPageBtn.addEventListener('click', () => changePage(1));
+            
+            // 搜索输入
+            elements.searchRecordsInput.addEventListener('input', debounce(filterRecords, 300));
+            
+            // 导出按钮
+            elements.exportBtn.addEventListener('click', exportRecords);
+            
+            // 导入按钮
+            elements.importFile.addEventListener('change', handleFileImport);
+            
+            // 复制按钮委托
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('.copy-btn')) {
+                    const copyBtn = e.target.closest('.copy-btn');
+                    let textToCopy = '';
+                    
+                    if (copyBtn.dataset.target) {
+                        const target = document.getElementById(copyBtn.dataset.target);
+                        textToCopy = target.value || target.textContent;
+                    } else if (copyBtn.dataset.text) {
+                        textToCopy = copyBtn.dataset.text;
+                    }
+                    
+                    if (textToCopy) {
+                        copyToClipboard(textToCopy, copyBtn.dataset.type);
+                    }
+                }
+            });
+            
+            // 当种子或轮次变化时重新生成加密顺序
+            elements.encryptionSeed.addEventListener('input', generateEncryptionOrder);
+            elements.encryptionRounds.addEventListener('change', generateEncryptionOrder);
+        }
+        
+        // 切换标签页
+        function switchTab(tabId) {
+            state.currentTab = tabId;
+            
+            // 隐藏所有标签页
+            elements.encryptTab.classList.add('hidden');
+            elements.databaseTab.classList.add('hidden');
+            elements.decryptTab.classList.add('hidden');
+            
+            // 显示当前标签页
+            document.getElementById(tabId).classList.remove('hidden');
+            
+            // 更新导航链接样式
+            document.querySelectorAll('.nav-link').forEach(link => {
+                if (link.getAttribute('href') === `#${tabId}`) {
+                    link.classList.add('active');
+                } else {
+                    link.classList.remove('active');
+                }
+            });
+        }
+        
+        // 保存D1配置
+        function saveD1Config() {
+            const workerUrl = elements.d1WorkerUrl.value.trim();
+            
+            if (!workerUrl) {
+                showNotification('请填写Workers服务URL', 'error');
+                return;
+            }
+            
+            // 简单的URL验证
+            if (!workerUrl.startsWith('https://')) {
+                showNotification('Workers服务URL必须以https://开头', 'error');
+                return;
+            }
+            
+            state.d1Config = {
+                workerUrl
+            };
+            
+            localStorage.setItem('d1Config', JSON.stringify(state.d1Config));
+            showNotification('Workers配置已保存', 'success');
+            elements.d1ConfigModal.classList.add('hidden');
+            
+            // 自动测试连接
+            testD1Connection();
+        }
+        
+        // 测试D1连接
+        async function testD1Connection() {
+            if (!state.d1Config.workerUrl) {
+                showNotification('请先保存Workers配置', 'error');
+                return;
+            }
+            
+            showNotification('正在验证D1连接...', 'info');
+            
+            try {
+                // 通过代理发送测试查询
+                const result = await d1ProxyRequest('all', 'SELECT name FROM sqlite_schema WHERE type="table";');
+                
+                if (result && result.results) {
+                    state.d1Connected = true;
+                    updateD1Status();
+                    showNotification('成功连接到Cloudflare D1数据库', 'success');
+                } else {
+                    throw new Error('无法访问数据库');
+                }
+            } catch (error) {
+                console.error('D1连接测试失败:', error);
+                state.d1Connected = false;
+                updateD1Status();
+                showNotification(`连接失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 生成加密顺序
+        function generateEncryptionOrder() {
+            const baseAlgorithms = ['SHA-256', 'SHA-1', 'MD5'];
+            const rounds = parseInt(elements.encryptionRounds.value);
+            const seed = elements.encryptionSeed.value.trim();
+            
+            let order = [];
+            
+            function createPRNG(seed) {
+                let state = seed ? parseInt(seed) || 1 : Math.floor(Math.random() * 10000);
+                return function() {
+                    state = (state * 9301 + 49297) % 233280;
+                    return state / 233280;
+                };
+            }
+            
+            const random = createPRNG(seed);
+            
+            for (let i = 0; i < rounds; i++) {
+                const randomIndex = Math.floor(random() * baseAlgorithms.length);
+                order.push(baseAlgorithms[randomIndex]);
+            }
+            
+            state.encryptionOrder = order;
+            updateEncryptionOrderPreview(order);
+            
+            return order;
+        }
+        
+        // 更新加密顺序预览
+        function updateEncryptionOrderPreview(order) {
+            elements.orderSteps.innerHTML = '';
+            elements.encryptionOrderPreview.classList.remove('hidden');
+            
+            order.forEach((alg, index) => {
+                const stepEl = document.createElement('span');
+                stepEl.className = 'encryption-step';
+                
+                switch(alg) {
+                    case 'SHA-256':
+                        stepEl.classList.add('bg-blue-500/20', 'text-blue-300');
+                        break;
+                    case 'SHA-1':
+                        stepEl.classList.add('bg-green-500/20', 'text-green-300');
+                        break;
+                    case 'MD5':
+                        stepEl.classList.add('bg-purple-500/20', 'text-purple-300');
+                        break;
+                }
+                
+                stepEl.textContent = `${index + 1}. ${alg}`;
+                elements.orderSteps.appendChild(stepEl);
+            });
+        }
+        
+        // 计算哈希值
+        async function handleEncryption() {
+            const inscription = elements.inscriptionInput.value.trim();
+            if (!inscription) return showNotification('请输入铭文内容', 'error');
+            
+            try {
+                let hash, algorithmInfo, seedValue, roundsValue;
+                
+                if (state.hashAlgorithm === 'strong') {
+                    const order = state.encryptionOrder.length ? 
+                        state.encryptionOrder : generateEncryptionOrder();
+                    
+                    roundsValue = order.length;
+                    seedValue = elements.encryptionSeed.value.trim() || '随机';
+                    
+                    hash = inscription;
+                    for (const alg of order) {
+                        hash = await calculateHash(hash, alg);
+                    }
+                    
+                    algorithmInfo = `强力加密 (${order.join(' → ')})`;
+                } else {
+                    hash = await calculateHash(inscription, state.hashAlgorithm);
+                    algorithmInfo = state.hashAlgorithm;
+                    seedValue = '';
+                    roundsValue = '';
+                }
+                
+                elements.hashOutput.value = hash;
+                elements.hashResult.classList.remove('hidden');
+                elements.saveToDbSection.classList.remove('hidden');
+                
+                elements.usedAlgorithmText.textContent = algorithmInfo;
+                elements.seedValue.textContent = seedValue;
+                
+                if (state.hashAlgorithm === 'strong') {
+                    elements.seedInfo.classList.remove('hidden');
+                    elements.roundsInfo.classList.remove('hidden');
+                    elements.roundsValue.textContent = roundsValue;
+                } else {
+                    elements.seedInfo.classList.add('hidden');
+                    elements.roundsInfo.classList.add('hidden');
+                }
+                
+                showNotification('哈希值生成成功', 'success');
+            } catch (err) {
+                console.error('哈希计算错误:', err);
+                showNotification('哈希值生成失败，请重试', 'error');
+            }
+        }
+        
+        // 哈希算法实现
+        async function calculateHash(text, algorithm) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(text);
+            let hashBuffer;
+            
+            switch (algorithm) {
+                case 'SHA-1': hashBuffer = await crypto.subtle.digest('SHA-1', data); break;
+                case 'SHA-256': hashBuffer = await crypto.subtle.digest('SHA-256', data); break;
+                case 'MD5': hashBuffer = await md5Digest(data); break;
+                default: hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            }
+            
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        
+        // MD5 兼容实现
+        async function md5Digest(data) {
+            const text = new TextDecoder().decode(data);
+            let hash = 0, i, chr;
+            if (!text) return new Uint8Array(16);
+            for (i = 0; i < text.length; i++) {
+                chr = text.charCodeAt(i);
+                hash = ((hash << 5) - hash) + chr;
+                hash |= 0;
+            }
+            const buffer = new ArrayBuffer(16);
+            const view = new DataView(buffer);
+            view.setUint32(0, hash, false);
+            view.setUint32(4, hash, false);
+            view.setUint32(8, hash, false);
+            view.setUint32(12, hash, false);
+            return buffer;
+        }
+        
+        // 保存到存储
+        async function saveToStorage() {
+            const remark = elements.remarkInput.value.trim();
+            const inscription = elements.inscriptionInput.value.trim();
+            const hash = elements.hashOutput.value.trim();
+            
+            if (!inscription || !hash) return showNotification('请先生成哈希值', 'error');
+            
+            let algorithm, seed, rounds, encryptionOrder;
+            
+            if (state.hashAlgorithm === 'strong') {
+                algorithm = 'strong';
+                seed = elements.encryptionSeed.value.trim() || '';
+                rounds = parseInt(elements.encryptionRounds.value);
+                encryptionOrder = state.encryptionOrder;
+            } else {
+                algorithm = state.hashAlgorithm;
+                seed = '';
+                rounds = 0;
+                encryptionOrder = [];
+            }
+            
+            const isDuplicate = isRecordDuplicate({
+                inscription,
+                algorithm,
+                seed,
+                encryptionOrder
+            });
+            
+            if (isDuplicate) {
+                return showNotification('您已经创建过此记录', 'error');
+            }
+            
+            const newId = (state.records.length + 1).toString();
+            
+            const newRecord = {
+                id: newId,
+                remark: remark,
+                inscription: inscription,
+                hash: hash,
+                algorithm: algorithm,
+                seed: seed,
+                rounds: rounds,
+                encryptionOrder: encryptionOrder,
+                createdAt: new Date().toISOString()
+            };
+            
+            const storageLocation = document.querySelector('input[name="storageLocation"]:checked').value;
+            
+            if (storageLocation === 'local') {
+                state.records.push(newRecord);
+                localStorage.setItem('inscriptionRecords', JSON.stringify(state.records));
+                showNotification('成功保存到本地存储', 'success');
+            } else {
+                if (!state.d1Connected) {
+                    showNotification('请先连接到D1数据库', 'error');
+                    return;
+                }
+                
+                try {
+                    const insertSQL = `
+                        INSERT OR REPLACE INTO inscriptions (id, remark, inscription, hash, algorithm, seed, rounds, encryptionOrder, createdAt)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                    `;
+                    
+                    const params = [
+                        newRecord.id,
+                        newRecord.remark || null,
+                        newRecord.inscription,
+                        newRecord.hash,
+                        newRecord.algorithm,
+                        newRecord.seed || null,
+                        newRecord.rounds || null,
+                        newRecord.encryptionOrder ? JSON.stringify(newRecord.encryptionOrder) : null,
+                        newRecord.createdAt
+                    ];
+                    
+                    await d1ProxyRequest('exec', insertSQL, params);
+                    
+                    // 添加到本地记录以便显示
+                    state.records.push(newRecord);
+                    localStorage.setItem('inscriptionRecords', JSON.stringify(state.records));
+                    showNotification('成功保存到D1数据库', 'success');
+                } catch (error) {
+                    console.error('保存到D1失败:', error);
+                    showNotification(`保存失败: ${error.message}`, 'error');
+                }
+            }
+            
+            renderRecords();
+        }
+        
+        // 检查记录是否重复
+        function isRecordDuplicate(newRecord) {
+            if (newRecord.algorithm === 'strong') {
+                return state.records.some(record => 
+                    record.inscription === newRecord.inscription && 
+                    record.algorithm === newRecord.algorithm &&
+                    JSON.stringify(record.encryptionOrder) === JSON.stringify(newRecord.encryptionOrder) &&
+                    record.seed === newRecord.seed
+                );
+            }
+            
+            return state.records.some(record => 
+                record.inscription === newRecord.inscription && 
+                record.algorithm === newRecord.algorithm
+            );
+        }
+        
+        // 上传到D1
+        async function uploadToD1() {
+            if (!state.d1Connected) {
+                showNotification('请先连接到D1数据库', 'error');
+                return;
+            }
+            
+            if (state.records.length === 0) {
+                showNotification('没有记录可上传', 'error');
+                return;
+            }
+            
+            showNotification(`正在上传 ${state.records.length} 条记录到D1...`, 'info');
+            
+            try {
+                // 创建表
+                const createTableSQL = `CREATE TABLE IF NOT EXISTS inscriptions (
+                    id TEXT PRIMARY KEY,
+                    remark TEXT,
+                    inscription TEXT NOT NULL,
+                    hash TEXT NOT NULL,
+                    algorithm TEXT NOT NULL,
+                    seed TEXT,
+                    rounds INTEGER,
+                    encryptionOrder TEXT,
+                    createdAt TEXT NOT NULL
+                );`;
+                
+                await d1ProxyRequest('exec', createTableSQL);
+                
+                // 插入记录
+                let successCount = 0;
+                
+                for (const record of state.records) {
+                    const insertSQL = `
+                        INSERT OR REPLACE INTO inscriptions (id, remark, inscription, hash, algorithm, seed, rounds, encryptionOrder, createdAt)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                    `;
+                    
+                    const params = [
+                        record.id,
+                        record.remark || null,
+                        record.inscription,
+                        record.hash,
+                        record.algorithm,
+                        record.seed || null,
+                        record.rounds || null,
+                        record.encryptionOrder ? JSON.stringify(record.encryptionOrder) : null,
+                        record.createdAt
+                    ];
+                    
+                    const result = await d1ProxyRequest('exec', insertSQL, params);
+                    
+                    if (result.success) {
+                        successCount++;
+                    }
+                }
+                
+                showNotification(`成功上传 ${successCount}/${state.records.length} 条记录到D1数据库`, 'success');
+            } catch (error) {
+                console.error('上传到D1失败:', error);
+                showNotification(`上传失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 从D1同步
+        async function syncFromD1() {
+            if (!state.d1Connected) {
+                showNotification('请先连接到D1数据库', 'error');
+                return;
+            }
+            
+            showNotification('正在从D1数据库同步记录...', 'info');
+            
+            try {
+                const result = await d1ProxyRequest('all', 'SELECT * FROM inscriptions;');
+                
+                if (!result || !result.results) {
+                    showNotification('从D1获取记录失败', 'error');
+                    return;
+                }
+                
+                const d1Records = result.results;
+                let newRecordCount = 0;
+                
+                for (const d1Record of d1Records) {
+                    const existingIndex = state.records.findIndex(r => r.id === d1Record.id);
+                    
+                    if (existingIndex === -1) {
+                        let encryptionOrder = [];
+                        if (d1Record.encryptionOrder) {
+                            try {
+                                encryptionOrder = JSON.parse(d1Record.encryptionOrder);
+                            } catch (e) {
+                                console.error('解析加密顺序失败:', e);
+                            }
+                        }
+                        
+                        state.records.push({
+                            id: d1Record.id,
+                            remark: d1Record.remark || '',
+                            inscription: d1Record.inscription,
+                            hash: d1Record.hash,
+                            algorithm: d1Record.algorithm,
+                            seed: d1Record.seed || '',
+                            rounds: d1Record.rounds || 0,
+                            encryptionOrder: encryptionOrder,
+                            createdAt: d1Record.createdAt
+                        });
+                        
+                        newRecordCount++;
+                    }
+                }
+                
+                localStorage.setItem('inscriptionRecords', JSON.stringify(state.records));
+                renderRecords();
+                
+                showNotification(`从D1同步了 ${d1Records.length} 条记录（新增 ${newRecordCount} 条）`, 'success');
+            } catch (error) {
+                console.error('从D1同步失败:', error);
+                showNotification(`同步失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 清空D1数据库
+        async function clearD1Database() {
+            if (!state.d1Connected) {
+                showNotification('请先连接到D1数据库', 'error');
+                return;
+            }
+            
+            if (!confirm('确定要清空D1数据库中的所有记录吗？此操作不可撤销！')) {
+                return;
+            }
+            
+            showNotification('正在清空D1数据库...', 'info');
+            
+            try {
+                await d1ProxyRequest('exec', 'DELETE FROM inscriptions;');
+                showNotification('D1数据库已成功清空', 'success');
+            } catch (error) {
+                console.error('清空D1失败:', error);
+                showNotification(`清空失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 执行查询
+        function performQuery() {
+            const queryValue = elements.queryInput.value.trim().toLowerCase();
+            if (!queryValue) return showNotification('请输入查询内容', 'error');
+            
+            let matches = [];
+            const querySeed = elements.querySeed.value.trim();
+            
+            if (state.queryType === 'remark') {
+                state.records.forEach(record => {
+                    if (!record.remark) return;
+                    
+                    if (record.remark.toLowerCase().includes(queryValue)) {
+                        matches.push(record);
+                    }
+                });
+            } 
+            else if (state.queryType === 'hash') {
+                matches = state.records.filter(record => {
+                    const hashMatches = record.hash.toLowerCase().includes(queryValue);
+                    if (querySeed && record.algorithm === 'strong') {
+                        return hashMatches && record.seed === querySeed;
+                    }
+                    return hashMatches;
+                });
+            } 
+            else {
+                matches = state.records.filter(record => 
+                    record.inscription.toLowerCase().includes(queryValue)
+                );
+            }
+            
+            if (matches.length > 0) {
+                elements.queryResult.classList.remove('hidden');
+                elements.noResult.classList.add('hidden');
+                elements.resultCount.textContent = `(${matches.length} 条匹配记录)`;
+                
+                elements.resultsContainer.innerHTML = '';
+                matches.forEach(record => {
+                    let algorithmInfo = record.algorithm;
+                    if (record.algorithm === 'strong') {
+                        algorithmInfo = `强力加密 (${record.encryptionOrder.join(' → ')})`;
+                    }
+                    
+                    const resultCard = document.createElement('div');
+                    resultCard.className = 'result-card';
+                    resultCard.innerHTML = `
+                        ${record.remark ? `
+                        <div class="mb-3 relative">
+                            <span class="text-sm font-medium text-white/80">备注:</span>
+                            <p class="mt-1 text-white">${record.remark}</p>
+                            <button class="copy-btn absolute top-0 right-0 p-1 text-gray-400 hover:text-primary" 
+                                    data-text="${record.remark}" 
+                                    data-type="备注">
+                                <i class="fa fa-copy"></i>
+                            </button>
+                        </div>
+                        ` : ''}
+                        <div class="mb-3 relative">
+                            <span class="text-sm font-medium text-white/80">铭文内容:</span>
+                            <p class="mt-1 text-white">${record.inscription}</p>
+                            <button class="copy-btn absolute top-0 right-0 p-1 text-gray-400 hover:text-primary" 
+                                    data-text="${record.inscription}" 
+                                    data-type="铭文内容">
+                                <i class="fa fa-copy"></i>
+                            </button>
+                        </div>
+                        <div class="mb-3 relative">
+                            <span class="text-sm font-medium text-white/80">哈希值:</span>
+                            <p class="mt-1 font-mono text-sm break-all text-white">${record.hash}</p>
+                            <button class="copy-btn absolute top-0 right-0 p-1 text-gray-400 hover:text-primary" 
+                                    data-text="${record.hash}" 
+                                    data-type="哈希值">
+                                <i class="fa fa-copy"></i>
+                            </button>
+                        </div>
+                        <div class="mb-3">
+                            <span class="text-sm font-medium text-white/80">算法:</span>
+                            <p class="mt-1 text-white">${algorithmInfo}</p>
+                        </div>
+                        ${record.algorithm === 'strong' ? `
+                        <div class="mb-3 relative">
+                            <span class="text-sm font-medium text-white/80">加密种子:</span>
+                            <p class="mt-1 text-white">${record.seed || '随机'}</p>
+                            <button class="copy-btn absolute top-0 right-0 p-1 text-gray-400 hover:text-primary" 
+                                    data-text="${record.seed || ''}" 
+                                    data-type="种子号">
+                                <i class="fa fa-copy"></i>
+                            </button>
+                        </div>
+                        <div class="mb-3">
+                            <span class="text-sm font-medium text-white/80">加密轮次:</span>
+                            <p class="mt-1 text-white">${record.rounds}</p>
+                        </div>
+                        <div class="mb-3">
+                            <span class="text-sm font-medium text-white/80">加密顺序:</span>
+                            <div class="mt-1 flex flex-wrap gap-2">
+                                ${record.encryptionOrder.map((alg, index) => {
+                                    let bgClass = '';
+                                    switch(alg) {
+                                        case 'SHA-256': bgClass = 'bg-blue-500/20 text-blue-300'; break;
+                                        case 'SHA-1': bgClass = 'bg-green-500/20 text-green-300'; break;
+                                        case 'MD5': bgClass = 'bg-purple-500/20 text-purple-300'; break;
+                                    }
+                                    return `<span class="encryption-step ${bgClass}">${index + 1}. ${alg}</span>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                        <div>
+                            <span class="text-sm font-medium text-white/80">存储时间:</span>
+                            <p class="mt-1 text-white">${new Date(record.createdAt).toLocaleString()}</p>
+                        </div>
+                    `;
+                    elements.resultsContainer.appendChild(resultCard);
+                });
+            } else {
+                elements.queryResult.classList.add('hidden');
+                elements.noResult.classList.remove('hidden');
+            }
+        }
+        
+        // 渲染记录
+        function renderRecords(searchTerm = '') {
+            let filtered = state.records;
+            
+            if (searchTerm) {
+                const term = searchTerm.toLowerCase();
+                filtered = state.records.filter(r => 
+                    (r.remark && r.remark.toLowerCase().includes(term)) ||
+                    r.inscription.toLowerCase().includes(term) || 
+                    r.hash.toLowerCase().includes(term) ||
+                    (r.seed && r.seed.toLowerCase().includes(term))
+                );
+            }
+            
+            const totalPages = Math.max(1, Math.ceil(filtered.length / state.recordsPerPage));
+            if (state.currentPage > totalPages) {
+                state.currentPage = totalPages;
+            }
+            
+            const start = (state.currentPage - 1) * state.recordsPerPage;
+            const paginated = filtered.slice(start, start + state.recordsPerPage);
+            
+            elements.prevPageBtn.disabled = state.currentPage <= 1;
+            elements.nextPageBtn.disabled = state.currentPage >= totalPages;
+            elements.pageInfo.textContent = `第 ${state.currentPage} / ${totalPages} 页`;
+            elements.shownRecords.textContent = paginated.length;
+            elements.totalRecords.textContent = filtered.length;
+            
+            if (!paginated.length) {
+                elements.recordsTableBody.innerHTML = `
+                    <tr class="text-center"><td colspan="8" class="px-4 py-8">
+                        <div class="flex flex-col items-center"><i class="fa fa-search text-4xl mb-3 text-gray-600"></i><p class="text-white">未找到匹配的记录</p></div>
+                    </td></tr>
+                `;
+                return;
+            }
+            
+            elements.recordsTableBody.innerHTML = paginated.map(r => {
+                let algorithmDisplay = r.algorithm;
+                if (r.algorithm === 'strong') {
+                    algorithmDisplay = `强力加密`;
+                }
+                
+                let seedRoundsDisplay = '-';
+                if (r.algorithm === 'strong') {
+                    seedRoundsDisplay = `${r.seed || '随机'}/${r.rounds}轮`;
+                }
+                
+                return `
+                <tr>
+                    <td class="text-white">${r.id}</td>
+                    <td class="relative">
+                        <div class="truncate max-w-xs text-white">${r.remark || '-'}</div>
+                        ${r.remark ? `<button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-primary" 
+                            data-text="${r.remark}" 
+                            data-type="备注">
+                            <i class="fa fa-copy"></i>
+                        </button>` : ''}
+                    </td>
+                    <td class="relative">
+                        <div class="truncate max-w-xs text-white">${r.inscription}</div>
+                        <button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-primary" 
+                            data-text="${r.inscription}" 
+                            data-type="铭文内容">
+                            <i class="fa fa-copy"></i>
+                        </button>
+                    </td>
+                    <td class="text-white">${algorithmDisplay}</td>
+                    <td class="relative">
+                        <div class="text-white">${seedRoundsDisplay}</div>
+                        ${r.seed ? `<button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-primary" 
+                            data-text="${r.seed}" 
+                            data-type="种子号">
+                            <i class="fa fa-copy"></i>
+                        </button>` : ''}
+                    </td>
+                    <td class="relative">
+                        <div class="truncate font-mono text-sm max-w-xs text-white">${r.hash}</div>
+                        <button class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-primary" 
+                            data-text="${r.hash}" 
+                            data-type="哈希值">
+                            <i class="fa fa-copy"></i>
+                        </button>
+                    </td>
+                    <td class="text-white">${new Date(r.createdAt).toLocaleDateString()}</td>
+                    <td>
+                        <button class="text-red-400 hover:text-red-300 transition-colors" onclick="deleteRecord('${r.id}')">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+        
+        // 删除记录
+        function deleteRecord(id) {
+            if (confirm('确定要删除这条记录吗？')) {
+                state.records = state.records.filter(record => record.id !== id);
+                localStorage.setItem('inscriptionRecords', JSON.stringify(state.records));
+                renderRecords();
+                showNotification('记录已删除', 'info');
+            }
+        }
+        
+        // 清空所有记录
+        function clearAllRecords() {
+            if (state.records.length === 0) {
+                return showNotification('没有记录可清空', 'info');
+            }
+            
+            if (confirm('确定要清空所有记录吗？此操作不可恢复！')) {
+                state.records = [];
+                localStorage.removeItem('inscriptionRecords');
+                renderRecords();
+                showNotification('所有记录已清空', 'info');
+            }
+        }
+        
+        // 分页切换
+        function changePage(direction) {
+            const newPage = state.currentPage + direction;
+            const totalPages = Math.ceil(state.records.length / state.recordsPerPage);
+            
+            if (newPage >= 1 && newPage <= totalPages) {
+                state.currentPage = newPage;
+                renderRecords(elements.searchRecordsInput.value);
+            }
+        }
+        
+        // 过滤记录
+        function filterRecords() {
+            state.currentPage = 1;
+            renderRecords(elements.searchRecordsInput.value);
+        }
+        
+        // 导出记录
+        function exportRecords() {
+            if (state.records.length === 0) {
+                return showNotification('没有记录可导出', 'error');
+            }
+            
+            try {
+                const exportData = {
+                    version: '1.0',
+                    createdAt: new Date().toISOString(),
+                    records: state.records
+                };
+                
+                const jsonString = JSON.stringify(exportData, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `inscription_records_${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(a);
+                a.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 0);
+                
+                showNotification(`成功导出 ${state.records.length} 条记录`, 'success');
+            } catch (error) {
+                console.error('导出失败:', error);
+                showNotification('导出失败，请重试', 'error');
+            }
+        }
+        
+        // 处理文件导入
+        function handleFileImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // 验证文件后缀
+            if (!file.name.endsWith('.json')) {
+                showNotification('请导入.json格式的文件', 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    const importData = JSON.parse(content);
+                    
+                    // 验证导入数据格式
+                    if (!importData.records || !Array.isArray(importData.records)) {
+                        throw new Error('无效的文件格式');
+                    }
+                    
+                    // 检查重复记录
+                    let newRecordCount = 0;
+                    
+                    importData.records.forEach(record => {
+                        const isDuplicate = state.records.some(r => 
+                            r.inscription === record.inscription && 
+                            r.algorithm === record.algorithm
+                        );
+                        
+                        if (!isDuplicate) {
+                            // 生成新ID
+                            record.id = (state.records.length + 1).toString();
+                            state.records.push(record);
+                            newRecordCount++;
+                        }
+                    });
+                    
+                    // 保存到本地存储
+                    localStorage.setItem('inscriptionRecords', JSON.stringify(state.records));
+                    
+                    // 更新UI
+                    renderRecords();
+                    
+                    showNotification(`成功导入 ${newRecordCount} 条记录`, 'success');
+                    
+                    // 重置文件输入
+                    elements.importFile.value = '';
+                } catch (error) {
+                    console.error('导入失败:', error);
+                    showNotification('导入失败，文件格式不正确', 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        // 复制到剪贴板
+        function copyToClipboard(text, type) {
+            if (!text) {
+                showNotification(`${type}内容为空，无法复制`, 'error');
+                return;
+            }
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showNotification(`${type}复制成功`, 'success');
+            }).catch(() => {
+                showNotification(`${type}复制失败，请手动复制`, 'error');
+            });
+        }
+        
+        // 显示通知
+        function showNotification(message, type = 'info') {
+            const notification = elements.notification;
+            const messageEl = elements.notificationMessage;
+            
+            notification.className = 'notification';
+            notification.classList.add(type);
+            messageEl.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // 防抖函数
+        function debounce(func, wait) {
+            let timeout;
+            return (...args) => {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+        
+        // 暴露deleteRecord函数到全局
+        window.deleteRecord = deleteRecord;
+    </script>
+</body>
+</html>
