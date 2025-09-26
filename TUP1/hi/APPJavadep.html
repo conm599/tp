@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepSeek API 客户端</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        // Tailwind配置
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        dark: '#1E293B',
+                        light: '#F8FAFC',
+                        neutral: '#64748B',
+                        thinking: '#F3F4F6' // 深度思考的背景色
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .scrollbar-hide {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .text-shadow {
+                text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            }
+            .animate-pulse-slow {
+                animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+            .sidebar-container {
+                width: 280px;
+                display: flex;
+                flex-direction: column;
+                height: calc(100vh - 64px);
+            }
+            .new-chat-section {
+                padding: 1.5rem;
+                border-bottom: 1px solid #e5e7eb;
+                background-color: white;
+                z-index: 10;
+            }
+            .chat-history-section {
+                flex: 1;
+                overflow-y: auto;
+                padding: 0 1rem;
+            }
+            pre {
+                background-color: #1e293b !important;
+                color: #f8fafc !important;
+                padding: 1rem;
+                border-radius: 0.375rem;
+                overflow-x: auto;
+                margin: 0.5rem 0;
+            }
+            code {
+                color: #f8fafc !important;
+                font-family: 'Fira Code', monospace;
+            }
+            .code-block {
+                position: relative;
+            }
+            .copy-btn {
+                position: absolute;
+                top: 0.5rem;
+                right: 0.5rem;
+                background: rgba(255, 255, 255, 0.2);
+                border: none;
+                color: white;
+                padding: 0.25rem 0.5rem;
+                border-radius: 0.25rem;
+                cursor: pointer;
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col">
+    <!-- 顶部导航栏 -->
+    <header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <button id="sidebarToggle" class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <i class="fa fa-bars text-gray-700 dark:text-gray-300"></i>
+                </button>
+                <h1 class="text-xl font-bold text-primary flex items-center">
+                    <i class="fa fa-comments-o mr-2"></i>
+                    <span>DeepSeek 客户端</span>
+                </h1>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <i class="fa fa-moon-o dark:hidden text-gray-700"></i>
+                    <i class="fa fa-sun-o hidden dark:inline text-gray-300"></i>
+                </button>
+                <button id="settingsBtn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative">
+                    <i class="fa fa-cog text-gray-700 dark:text-gray-300"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <!-- 侧边栏 - 新对话区域（完全独立固定） + 对话历史（独立滚动） -->
+        <aside id="sidebar" class="sidebar-container bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex-shrink-0 fixed h-[calc(100vh-64px)] top-[64px] left-0 z-40 transform -translate-x-full md:translate-x-0 transition-transform duration-300">
+            <!-- 新对话区域（完全独立固定在左上角） -->
+            <div class="new-chat-section">
+                <button id="newChatBtn" class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center shadow-sm">
+                    <i class="fa fa-plus mr-2"></i> 新对话
+                </button>
+                <div class="mt-4 text-xs text-gray-500 dark:text-gray-400">
+                    开始一个全新的对话
+                </div>
+            </div>
+            
+            <!-- 对话历史区域（完全独立，在新对话区域下方滚动） -->
+            <div class="chat-history-section">
+                <h2 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider px-3 py-4 sticky top-0 bg-white dark:bg-gray-800 z-10">
+                    对话历史
+                </h2>
+                <div id="chatHistory" class="space-y-1 pb-4">
+                    <!-- 对话历史将通过JS动态添加 -->
+                    <div class="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+                        <div class="truncate text-sm">示例对话 1</div>
+                    </div>
+                    <div class="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+                        <div class="truncate text-sm">示例对话 2</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 侧边栏遮罩（移动端） -->
+        <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-25 z-30 hidden md:hidden"></div>
+
+        <!-- 主内容区 - 对话界面 -->
+        <main class="flex-1 flex flex-col overflow-hidden md:ml-0">
+            <!-- 对话区域 -->
+            <div id="chatContainer" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 bg-gray-50 dark:bg-gray-900">
+                <!-- 欢迎消息 -->
+                <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white">
+                        <i class="fa fa-robot"></i>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-lg rounded-tl-none px-4 py-3 shadow-sm max-w-[85%]">
+                        <p class="text-gray-800 dark:text-gray-200">
+                            欢迎使用 DeepSeek API 客户端！请在设置中配置您的 API 密钥以开始使用。
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 代码示例 -->
+                <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white">
+                        <i class="fa fa-robot"></i>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-lg rounded-tl-none px-4 py-3 shadow-sm max-w-[85%]">
+                        <p class="text-gray-800 dark:text-gray-200 mb-2">
+                            这是一个代码示例：
+                        </p>
+                        <div class="code-block">
+                            <button class="copy-btn" onclick="copyCode(this)">
+                                <i class="fa fa-copy"></i> 复制
+                            </button>
+                            <pre><code>function helloWorld() {
+    console.log("Hello, World!");
+    return "This is a code example";
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 对话输入栏（完全固定在最底部） -->
+            <div id="inputArea" class="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
+                <div class="flex items-center mb-2 flex-wrap gap-2">
+                    <button id="searchToggle" class="p-2 text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary transition-colors">
+                        <i class="fa fa-search"></i>
+                    </button>
+                    <button id="thinkingToggle" class="p-2 text-gray-500 hover:text-primary dark:text-gray-400 dark:hover:text-primary transition-colors">
+                        <i class="fa fa-lightbulb-o"></i>
+                    </button>
+                    <span id="searchIndicator" class="ml-1 text-xs text-green-500">
+                        <i class="fa fa-check-circle"></i> 已启用联网搜索
+                    </span>
+                    <span id="thinkingIndicator" class="ml-1 text-xs text-blue-500 hidden">
+                        <i class="fa fa-check-circle"></i> 已启用深度思考
+                    </span>
+                </div>
+                
+                <form id="chatForm" class="relative">
+                    <textarea 
+                        id="userInput" 
+                        rows="3" 
+                        placeholder="请输入消息..." 
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-primary focus:border-primary resize-none transition-all"
+                    ></textarea>
+                    <button 
+                        type="submit" 
+                        class="absolute right-3 bottom-3 bg-primary hover:bg-primary/90 text-white rounded-full p-2 transition-colors"
+                    >
+                        <i class="fa fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- 设置弹窗 -->
+    <div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div class="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h2 class="text-xl font-bold">设置</h2>
+                <button id="closeSettings" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="p-5 space-y-5">
+                <!-- API设置 -->
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">API 设置</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="apiKey">
+                                API Key <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="password" 
+                                id="apiKey" 
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary"
+                                placeholder="sk-..."
+                            >
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="baseUrl">
+                                Base URL <span class="text-red-500">*</span>
+                            </label>
+                            <input 
+                                type="text" 
+                                id="baseUrl" 
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary"
+                                value="https://api.deepseek.com"
+                            >
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1" for="model">
+                                模型选择
+                            </label>
+                            <select 
+                                id="model" 
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary"
+                            >
+                                <option value="deepseek-chat">deepseek-chat (V3.1 非思考模式)</option>
+                                <option value="deepseek-reasoner">deepseek-reasoner (V3.1 思考模式)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 系统提示词 -->
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">系统提示词</h3>
+                    <textarea 
+                        id="systemPrompt" 
+                        rows="4" 
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="输入系统提示词..."
+                    ></textarea>
+                    <p class="text-xs text-gray-500 mt-1">系统提示词将应用于所有新对话，指导AI的回答风格和行为</p>
+                </div>
+                
+                <!-- 其他设置 -->
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">其他设置</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center">
+                            <input 
+                                type="checkbox" 
+                                id="autoScroll" 
+                                class="w-4 h-4 text-primary focus:ring-primary border-gray-300 rounded"
+                                checked
+                            >
+                            <label for="autoScroll" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                                自动滚动到最新消息（用户上翻时暂停）
+                            </label>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <input 
+                                type="checkbox" 
+                                id="preserveFormatting" 
+                                class="w-4 h-4 text-primary focus:ring-primary border-gray-300 rounded"
+                                checked
+                            >
+                            <label for="preserveFormatting" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                                保留代码格式
+                            </label>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input 
+                                type="checkbox" 
+                                id="persistThinkingMode" 
+                                class="w-4 h-4 text-primary focus:ring-primary border-gray-300 rounded"
+                            >
+                            <label for="persistThinkingMode" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                                保持深度思考模式开启
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-5 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+                <button id="saveSettings" class="bg-primary hover:bg-primary/90 text-white font-medium py-2 px-6 rounded-lg transition-colors">
+                    保存设置
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局状态管理
+        const state = {
+            apiKey: '',
+            baseUrl: 'https://api.deepseek.com',
+            model: 'deepseek-chat',
+            systemPrompt: '',
+            autoScroll: true,
+            preserveFormatting: true,
+            persistThinkingMode: false,
+            currentChatId: null,
+            chats: {},
+            isSearchEnabled: true,
+            isThinkingEnabled: false,
+            activeRequests: 0,
+            isUserScrollingUp: false,
+            scrollThreshold: 50,
+            sidebarOpen: false,
+            isDarkMode: false
+        };
+
+        // DOM 元素缓存
+        const elements = {
+            chatContainer: document.getElementById('chatContainer'),
+            userInput: document.getElementById('userInput'),
+            chatForm: document.getElementById('chatForm'),
+            chatHistory: document.getElementById('chatHistory'),
+            newChatBtn: document.getElementById('newChatBtn'),
+            sidebar: document.getElementById('sidebar'),
+            sidebarToggle: document.getElementById('sidebarToggle'),
+            sidebarOverlay: document.getElementById('sidebarOverlay'),
+            settingsBtn: document.getElementById('settingsBtn'),
+            settingsModal: document.getElementById('settingsModal'),
+            closeSettings: document.getElementById('closeSettings'),
+            saveSettings: document.getElementById('saveSettings'),
+            apiKeyInput: document.getElementById('apiKey'),
+            baseUrlInput: document.getElementById('baseUrl'),
+            modelSelect: document.getElementById('model'),
+            systemPromptInput: document.getElementById('systemPrompt'),
+            autoScrollCheckbox: document.getElementById('autoScroll'),
+            preserveFormattingCheckbox: document.getElementById('preserveFormatting'),
+            persistThinkingModeCheckbox: document.getElementById('persistThinkingMode'),
+            themeToggle: document.getElementById('themeToggle'),
+            searchToggle: document.getElementById('searchToggle'),
+            thinkingToggle: document.getElementById('thinkingToggle'),
+            searchIndicator: document.getElementById('searchIndicator'),
+            thinkingIndicator: document.getElementById('thinkingIndicator'),
+            inputArea: document.getElementById('inputArea')
+        };
+
+        // 初始化应用
+        function initApp() {
+            loadSettings();
+            loadChats();
+            setDarkMode(state.isDarkMode);
+            bindEvents();
+            updateSendButtonState();
+            initScrollListener();
+            adjustInputAreaHeight();
+            
+            // 设置侧边栏默认关闭
+            state.sidebarOpen = false;
+            updateSidebarState(state.sidebarOpen);
+        }
+
+        // 更新侧边栏状态
+        function updateSidebarState(open) {
+            if (open) {
+                elements.sidebar.classList.remove('-translate-x-full');
+                elements.sidebarOverlay.classList.remove('hidden');
+                document.body.classList.add('overflow-hidden');
+            } else {
+                elements.sidebar.classList.add('-translate-x-full');
+                elements.sidebarOverlay.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            }
+        }
+
+        // 加载保存的设置
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('deepseekSettings');
+            if (savedSettings) {
+                try {
+                    const parsed = JSON.parse(savedSettings);
+                    state.apiKey = parsed.apiKey || '';
+                    state.baseUrl = parsed.baseUrl || 'https://api.deepseek.com';
+                    state.model = parsed.model || 'deepseek-chat';
+                    state.systemPrompt = parsed.systemPrompt || '';
+                    state.autoScroll = parsed.autoScroll !== undefined ? parsed.autoScroll : true;
+                    state.preserveFormatting = parsed.preserveFormatting !== undefined ? parsed.preserveFormatting : true;
+                    state.persistThinkingMode = parsed.persistThinkingMode || false;
+                    state.isDarkMode = parsed.isDarkMode !== undefined ? parsed.isDarkMode : state.isDarkMode;
+                    
+                    elements.apiKeyInput.value = state.apiKey;
+                    elements.baseUrlInput.value = state.baseUrl;
+                    elements.modelSelect.value = state.model;
+                    elements.systemPromptInput.value = state.systemPrompt;
+                    elements.autoScrollCheckbox.checked = state.autoScroll;
+                    elements.preserveFormattingCheckbox.checked = state.preserveFormatting;
+                    elements.persistThinkingModeCheckbox.checked = state.persistThinkingMode;
+                } catch (e) {
+                    console.error('加载设置失败:', e);
+                    showToast('设置加载失败，使用默认设置');
+                }
+            }
+        }
+
+        // 保存设置
+        function saveSettings() {
+            state.apiKey = elements.apiKeyInput.value;
+            state.baseUrl = elements.baseUrlInput.value;
+            state.model = elements.modelSelect.value;
+            state.systemPrompt = elements.systemPromptInput.value;
+            state.autoScroll = elements.autoScrollCheckbox.checked;
+            state.preserveFormatting = elements.preserveFormattingCheckbox.checked;
+            state.persistThinkingMode = elements.persistThinkingModeCheckbox.checked;
+            
+            const settingsToSave = {
+                apiKey: state.apiKey,
+                baseUrl: state.baseUrl,
+                model: state.model,
+                systemPrompt: state.systemPrompt,
+                autoScroll: state.autoScroll,
+                preserveFormatting: state.preserveFormatting,
+                persistThinkingMode: state.persistThinkingMode,
+                isDarkMode: state.isDarkMode
+            };
+            
+            try {
+                localStorage.setItem('deepseekSettings', JSON.stringify(settingsToSave));
+                updateSendButtonState();
+                showToast('设置已保存');
+            } catch (e) {
+                console.error('保存设置失败:', e);
+                showToast('设置保存失败');
+            }
+        }
+
+        // 加载对话
+        function loadChats() {
+            try {
+                const savedChats = localStorage.getItem('deepseekChats');
+                if (savedChats) {
+                    state.chats = JSON.parse(savedChats);
+                }
+                renderChatHistory();
+                if (Object.keys(state.chats).length > 0) {
+                    const latestChatId = Object.keys(state.chats).sort().pop();
+                    loadChat(latestChatId);
+                }
+            } catch (e) {
+                console.error('加载对话失败:', e);
+                state.chats = {};
+                showToast('对话历史加载失败');
+            }
+        }
+
+        // 创建新对话
+        function createNewChat() {
+            const chatId = Date.now().toString();
+            state.currentChatId = chatId;
+            state.chats[chatId] = {
+                title: '新对话',
+                messages: []
+            };
+            saveChats();
+            renderChatHistory();
+            clearChatContainer();
+            scrollToBottom(true);
+            
+            // 在移动设备上，创建新对话后关闭侧边栏
+            if (window.innerWidth < 768) {
+                state.sidebarOpen = false;
+                updateSidebarState(state.sidebarOpen);
+            }
+        }
+
+        // 加载特定对话
+        function loadChat(chatId) {
+            if (!state.chats[chatId]) return;
+            
+            state.currentChatId = chatId;
+            clearChatContainer();
+            
+            const messages = state.chats[chatId].messages;
+            
+            // 历史对话直接完整显示，不使用流式
+            messages.forEach(msg => {
+                addMessageToDOM(msg.role, msg.content, msg.isSearching, msg.isThinking, msg.thinkingContent, true);
+            });
+            
+            highlightCurrentChat();
+            scrollToBottom(true);
+            
+            // 在移动设备上，加载对话后关闭侧边栏
+            if (window.innerWidth < 768) {
+                state.sidebarOpen = false;
+                updateSidebarState(state.sidebarOpen);
+            }
+        }
+
+        // 渲染对话历史列表
+        function renderChatHistory() {
+            elements.chatHistory.innerHTML = '';
+            
+            const sortedChatIds = Object.keys(state.chats).sort((a, b) => b - a);
+            const maxDisplayed = 50;
+            const displayedChatIds = sortedChatIds.slice(0, maxDisplayed);
+            
+            displayedChatIds.forEach(chatId => {
+                const chat = state.chats[chatId];
+                const chatItem = document.createElement('div');
+                chatItem.className = `p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors flex justify-between items-center ${state.currentChatId === chatId ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`;
+                chatItem.innerHTML = `
+                    <div class="truncate max-w-[80%] text-sm">${chat.title}</div>
+                    <button class="delete-chat-btn p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full text-gray-500 opacity-0 hover:opacity-100 transition-opacity" data-chat-id="${chatId}">
+                        <i class="fa fa-trash-o"></i>
+                    </button>
+                `;
+                
+                chatItem.addEventListener('click', (e) => {
+                    if (!e.target.closest('.delete-chat-btn')) {
+                        loadChat(chatId);
+                    }
+                });
+                
+                elements.chatHistory.appendChild(chatItem);
+            });
+        }
+
+        // 清除对话容器
+        function clearChatContainer() {
+            elements.chatContainer.innerHTML = '';
+        }
+
+        // 添加消息到DOM
+        function addMessageToDOM(role, content, isSearching = false, isThinking = false, thinkingContent = '', isHistory = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `flex items-start space-x-3 ${role === 'user' ? 'justify-end' : ''} message-item`;
+            
+            let avatar, bgClass, roundedClass;
+            
+            if (role === 'user') {
+                avatar = `<div class="flex-shrink-0 w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-gray-700 dark:text-gray-300">
+                            <i class="fa fa-user"></i>
+                        </div>`;
+                bgClass = 'bg-primary text-white';
+                roundedClass = 'rounded-lg rounded-tr-none';
+            } else {
+                avatar = `<div class="flex-shrink-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white">
+                            <i class="fa fa-robot"></i>
+                        </div>`;
+                bgClass = 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200';
+                roundedClass = 'rounded-lg rounded-tl-none';
+            }
+            
+            let indicators = '';
+            if (isSearching) {
+                indicators += `<div class="text-xs text-green-500 mb-1 flex items-center"><i class="fa fa-search mr-1"></i> 已使用联网搜索</div>`;
+            }
+            
+            const contentContainer = document.createElement('div');
+            contentContainer.className = `${bgClass} ${roundedClass} px-4 py-3 shadow-sm max-w-[85%]`;
+            
+            if (indicators) {
+                contentContainer.innerHTML += indicators;
+            }
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            
+            // 添加主要内容
+            const mainContentDiv = document.createElement('div');
+            mainContentDiv.className = 'main-content';
+            
+            // 处理代码块
+            const formattedContent = formatContent(content);
+            mainContentDiv.innerHTML = formattedContent;
+            
+            messageContent.appendChild(mainContentDiv);
+            contentContainer.appendChild(messageContent);
+            
+            if (role !== 'user') {
+                messageDiv.innerHTML += avatar;
+            }
+            messageDiv.appendChild(contentContainer);
+            if (role === 'user') {
+                messageDiv.innerHTML += avatar;
+            }
+            
+            elements.chatContainer.appendChild(messageDiv);
+            
+            if (state.autoScroll && !state.isUserScrollingUp) {
+                scrollToBottom();
+            }
+        }
+
+        // 格式化内容，处理代码块
+        function formatContent(content) {
+            // 处理代码块 ```language ... ```
+            let formatted = content.replace(/```(\w+)?\s([\s\S]*?)```/g, (match, language, code) => {
+                return `<div class="code-block my-2">
+                            <button class="copy-btn" onclick="copyCode(this)">
+                                <i class="fa fa-copy"></i> 复制
+                            </button>
+                            <pre><code class="${language ? `language-${language}` : ''}">${escapeHtml(code.trim())}</code></pre>
+                        </div>`;
+            });
+            
+            // 处理内联代码 `code`
+            formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded text-sm">$1</code>');
+            
+            // 处理换行
+            formatted = formatted.replace(/\n/g, '<br>');
+            
+            return formatted;
+        }
+
+        // 转义HTML特殊字符
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // 复制代码函数
+        function copyCode(button) {
+            const codeBlock = button.nextElementSibling;
+            const textToCopy = codeBlock.textContent;
+            
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalText = button.innerHTML;
+                button.innerHTML = '<i class="fa fa-check"></i> 已复制';
+                button.classList.add('text-green-500');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.classList.remove('text-green-500');
+                }, 2000);
+            }).catch(err => {
+                console.error('复制失败:', err);
+                showToast('复制失败，请手动复制');
+            });
+        }
+
+        // 切换设置弹窗
+        function toggleSettingsModal() {
+            elements.settingsModal.classList.toggle('hidden');
+        }
+
+        // 切换搜索功能
+        function toggleSearch() {
+            state.isSearchEnabled = !state.isSearchEnabled;
+            updateSearchIndicator();
+        }
+
+        // 切换深度思考功能
+        function toggleThinking() {
+            state.isThinkingEnabled = !state.isThinkingEnabled;
+            updateThinkingIndicator();
+        }
+
+        // 更新搜索指示器
+        function updateSearchIndicator() {
+            if (state.isSearchEnabled) {
+                elements.searchIndicator.classList.remove('hidden');
+            } else {
+                elements.searchIndicator.classList.add('hidden');
+            }
+        }
+
+        // 更新深度思考指示器
+        function updateThinkingIndicator() {
+            if (state.isThinkingEnabled) {
+                elements.thinkingIndicator.classList.remove('hidden');
+            } else {
+                elements.thinkingIndicator.classList.add('hidden');
+            }
+        }
+
+        // 切换暗黑模式
+        function setDarkMode(enable) {
+            state.isDarkMode = enable;
+            
+            if (enable) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+            
+            // 保存设置
+            const settingsToSave = {
+                apiKey: state.apiKey,
+                baseUrl: state.baseUrl,
+                model: state.model,
+                systemPrompt: state.systemPrompt,
+                autoScroll: state.autoScroll,
+                preserveFormatting: state.preserveFormatting,
+                persistThinkingMode: state.persistThinkingMode,
+                isDarkMode: state.isDarkMode
+            };
+            
+            localStorage.setItem('deepseekSettings', JSON.stringify(settingsToSave));
+        }
+
+        // 切换侧边栏
+        function toggleSidebar() {
+            state.sidebarOpen = !state.sidebarOpen;
+            updateSidebarState(state.sidebarOpen);
+        }
+
+        // 滚动到底部
+        function scrollToBottom(force = false) {
+            if ((state.autoScroll && !state.isUserScrollingUp) || force) {
+                elements.chatContainer.scrollTo({
+                    top: elements.chatContainer.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }
+        }
+
+        // 初始化滚动监听
+        function initScrollListener() {
+            elements.chatContainer.addEventListener('scroll', () => {
+                const { scrollTop, scrollHeight, clientHeight } = elements.chatContainer;
+                const distanceToBottom = scrollHeight - (scrollTop + clientHeight);
+                
+                state.isUserScrollingUp = distanceToBottom > state.scrollThreshold;
+            });
+        }
+
+        // 适配输入区高度
+        function adjustInputAreaHeight() {
+            window.addEventListener('resize', updateInputAreaPadding);
+            elements.userInput.addEventListener('focus', updateInputAreaPadding);
+            elements.userInput.addEventListener('blur', updateInputAreaPadding);
+            
+            updateInputAreaPadding();
+        }
+
+        // 更新对话区底部内边距
+        function updateInputAreaPadding() {
+            const inputHeight = elements.inputArea.offsetHeight;
+            elements.chatContainer.style.paddingBottom = `${inputHeight + 16}px`;
+        }
+
+        // 更新发送按钮状态
+        function updateSendButtonState() {
+            const sendButton = elements.chatForm.querySelector('button[type="submit"]');
+            sendButton.disabled = !state.apiKey || elements.userInput.value.trim() === '' || state.activeRequests > 0;
+        }
+
+        // 显示提示消息
+        function showToast(message) {
+            let toast = document.querySelector('.toast-notification');
+            
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.className = 'toast-notification fixed bottom-24 right-4 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg z-50 transform translate-y-10 opacity-0 transition-all duration-300';
+                document.body.appendChild(toast);
+            }
+            
+            toast.textContent = message;
+            toast.classList.remove('translate-y-10', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-10', 'opacity-0');
+            }, 3000);
+        }
+
+        // 绑定事件监听器
+        function bindEvents() {
+            elements.chatForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                // 模拟发送消息
+                const userMessage = elements.userInput.value.trim();
+                if (userMessage) {
+                    addMessageToDOM('user', userMessage);
+                    elements.userInput.value = '';
+                    
+                    // 模拟AI回复
+                    setTimeout(() => {
+                        addMessageToDOM('assistant', '这是一个示例回复。在实际应用中，这里会显示来自DeepSeek API的回复。\n\n你可以尝试以下代码：\n\n```javascript\nfunction example() {\n    console.log("这是一个代码示例");\n    return "Hello, World!";\n}\n```');
+                    }, 1000);
+                }
+            });
+            
+            elements.userInput.addEventListener('input', updateSendButtonState);
+            
+            elements.newChatBtn.addEventListener('click', createNewChat);
+            
+            // 侧边栏切换按钮
+            elements.sidebarToggle.addEventListener('click', toggleSidebar);
+            // 侧边栏遮罩点击关闭
+            elements.sidebarOverlay.addEventListener('click', () => {
+                state.sidebarOpen = false;
+                updateSidebarState(state.sidebarOpen);
+            });
+            
+            elements.settingsBtn.addEventListener('click', toggleSettingsModal);
+            elements.closeSettings.addEventListener('click', toggleSettingsModal);
+            
+            elements.saveSettings.addEventListener('click', () => {
+                saveSettings();
+                toggleSettingsModal();
+            });
+            
+            elements.themeToggle.addEventListener('click', () => {
+                setDarkMode(!state.isDarkMode);
+            });
+            
+            elements.searchToggle.addEventListener('click', toggleSearch);
+            elements.thinkingToggle.addEventListener('click', toggleThinking);
+            
+            elements.settingsModal.addEventListener('click', (e) => {
+                if (e.target === elements.settingsModal) {
+                    toggleSettingsModal();
+                }
+            });
+            
+            elements.userInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    elements.chatForm.dispatchEvent(new Event('submit'));
+                }
+            });
+
+            window.addEventListener('resize', () => {
+                if (state.currentChatId) {
+                    // highlightCurrentChat();
+                }
+                updateInputAreaPadding();
+                
+                // 大屏幕自动显示侧边栏，小屏幕保持当前状态
+                if (window.innerWidth >= 768) {
+                    state.sidebarOpen = true;
+                } else {
+                    state.sidebarOpen = false;
+                }
+                updateSidebarState(state.sidebarOpen);
+            });
+        }
+
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
