@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NasCab Music - 跨域文件管理器</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4a6fa5;
+            --secondary: #6b8cbc;
+            --dark: #2c3e50;
+            --light: #ecf0f1;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--dark), #34495e);
+            color: var(--light);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: var(--light);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .card h2 {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card h2 i {
+            color: var(--secondary);
+        }
+        
+        .file-list {
+            list-style: none;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .file-list li {
+            padding: 10px;
+            margin-bottom: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.3s;
+        }
+        
+        .file-list li:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .file-icon {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--primary);
+            border-radius: 5px;
+        }
+        
+        .folder .file-icon {
+            background: var(--warning);
+        }
+        
+        .audio .file-icon {
+            background: var(--success);
+        }
+        
+        .file-info {
+            flex: 1;
+        }
+        
+        .file-name {
+            font-weight: 600;
+        }
+        
+        .file-details {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+        
+        .json-viewer {
+            background: #1e1e1e;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        
+        .json-key {
+            color: #9cdcfe;
+        }
+        
+        .json-string {
+            color: #ce9178;
+        }
+        
+        .json-number {
+            color: #b5cea8;
+        }
+        
+        .json-boolean {
+            color: #569cd6;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            background: var(--primary);
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        button:hover {
+            background: var(--secondary);
+        }
+        
+        button.secondary {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        button.secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .player {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+        
+        .player-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .progress-bar {
+            flex: 1;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background: var(--success);
+            width: 30%;
+        }
+        
+        .now-playing {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .now-playing img {
+            width: 50px;
+            height: 50px;
+            border-radius: 5px;
+            object-fit: cover;
+        }
+        
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .volume-slider {
+            width: 100px;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .status.success {
+            background: rgba(46, 204, 113, 0.2);
+            border-left: 4px solid var(--success);
+            display: block;
+        }
+        
+        .status.error {
+            background: rgba(231, 76, 60, 0.2);
+            border-left: 4px solid var(--danger);
+            display: block;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            opacity: 0.7;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-music"></i> NasCab Music</h1>
+            <p class="subtitle">跨域文件管理器与音乐播放器</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="card">
+                <h2><i class="fas fa-folder-open"></i> 文件浏览器</h2>
+                <ul class="file-list" id="fileList">
+                    <!-- 文件列表将通过JavaScript动态生成 -->
+                </ul>
+                
+                <div class="controls">
+                    <button id="refreshBtn"><i class="fas fa-sync-alt"></i> 刷新文件列表</button>
+                    <button class="secondary" id="viewJsonBtn"><i class="fas fa-code"></i> 查看JSON数据</button>
+                </div>
+                
+                <div class="status" id="statusMessage"></div>
+            </div>
+            
+            <div class="card">
+                <h2><i class="fas fa-code"></i> JSON 数据视图</h2>
+                <div class="json-viewer" id="jsonViewer">
+                    {/* JSON 数据将在这里显示 */}
+                </div>
+                
+                <div class="player">
+                    <div class="now-playing">
+                        <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?ixlib=rb-1.2.1&auto=format&fit=crop&w=100&q=80" alt="专辑封面">
+                        <div>
+                            <div class="file-name">示例音乐文件.mp3</div>
+                            <div class="file-details">艺术家 - 专辑</div>
+                        </div>
+                    </div>
+                    
+                    <div class="player-controls">
+                        <button><i class="fas fa-step-backward"></i></button>
+                        <button><i class="fas fa-play"></i></button>
+                        <button><i class="fas fa-step-forward"></i></button>
+                        
+                        <div class="progress-bar">
+                            <div class="progress"></div>
+                        </div>
+                        
+                        <div class="volume-control">
+                            <i class="fas fa-volume-up"></i>
+                            <input type="range" class="volume-slider" min="0" max="100" value="80">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>NasCab Music &copy; 2023 | 支持跨域访问的文件管理器</p>
+        </footer>
+    </div>
+
+    <script>
+        // 模拟从服务器获取的文件数据（在实际应用中，这将通过跨域API调用获取）
+        const mockFileData = {
+            status: "success",
+            message: "文件列表获取成功",
+            data: {
+                currentPath: "/music",
+                files: [
+                    { name: "经典老歌", type: "folder", size: null, modified: "2023-10-15" },
+                    { name: "流行音乐", type: "folder", size: null, modified: "2023-10-10" },
+                    { name: "摇滚专辑", type: "folder", size: null, modified: "2023-09-28" },
+                    { name: "爵士精选", type: "folder", size: null, modified: "2023-09-20" },
+                    { name: "月光奏鸣曲", type: "audio", extension: "mp3", size: "5.2MB", duration: "3:45", modified: "2023-10-05" },
+                    { name: "夏日海滩", type: "audio", extension: "flac", size: "12.1MB", duration: "4:20", modified: "2023-10-12" },
+                    { name: "城市夜晚", type: "audio", extension: "wav", size: "25.7MB", duration: "5:15", modified: "2023-10-08" },
+                    { name: "清晨阳光", type: "audio", extension: "mp3", size: "4.8MB", duration: "3:30", modified: "2023-10-03" },
+                    { name: "播放列表", type: "file", extension: "m3u", size: "15KB", modified: "2023-10-01" },
+                    { name: "专辑封面", type: "image", extension: "jpg", size: "2.1MB", modified: "2023-09-25" }
+                ]
+            }
+        };
+
+        // DOM元素
+        const fileList = document.getElementById('fileList');
+        const jsonViewer = document.getElementById('jsonViewer');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const viewJsonBtn = document.getElementById('viewJsonBtn');
+        const statusMessage = document.getElementById('statusMessage');
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            renderFileList(mockFileData.data.files);
+            displayJson(mockFileData);
+            
+            // 添加事件监听器
+            refreshBtn.addEventListener('click', refreshFileList);
+            viewJsonBtn.addEventListener('click', toggleJsonView);
+        });
+
+        // 渲染文件列表
+        function renderFileList(files) {
+            fileList.innerHTML = '';
+            
+            files.forEach(file => {
+                const li = document.createElement('li');
+                li.className = file.type;
+                
+                // 根据文件类型设置图标
+                let iconClass = 'fas fa-file';
+                if (file.type === 'folder') {
+                    iconClass = 'fas fa-folder';
+                } else if (file.type === 'audio') {
+                    iconClass = 'fas fa-music';
+                } else if (file.type === 'image') {
+                    iconClass = 'fas fa-image';
+                }
+                
+                li.innerHTML = `
+                    <div class="file-icon">
+                        <i class="${iconClass}"></i>
+                    </div>
+                    <div class="file-info">
+                        <div class="file-name">${file.name}${file.extension ? '.' + file.extension : ''}</div>
+                        <div class="file-details">
+                            ${file.type === 'folder' ? '文件夹' : 
+                              file.type === 'audio' ? `音频 · ${file.duration} · ${file.size}` : 
+                              file.type === 'image' ? `图片 · ${file.size}` : 
+                              `文件 · ${file.size}`}
+                            · 修改时间: ${file.modified}
+                        </div>
+                    </div>
+                `;
+                
+                fileList.appendChild(li);
+            });
+        }
+
+        // 显示JSON数据
+        function displayJson(data) {
+            // 使用语法高亮显示JSON
+            const jsonString = JSON.stringify(data, null, 2);
+            
+            // 简单的JSON语法高亮
+            const highlightedJson = jsonString
+                .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function(match) {
+                    let cls = 'json-number';
+                    if (/^"/.test(match)) {
+                        if (/:$/.test(match)) {
+                            cls = 'json-key';
+                        } else {
+                            cls = 'json-string';
+                        }
+                    } else if (/true|false/.test(match)) {
+                        cls = 'json-boolean';
+                    } else if (/null/.test(match)) {
+                        cls = 'json-null';
+                    }
+                    return '<span class="' + cls + '">' + match + '</span>';
+                });
+            
+            jsonViewer.innerHTML = highlightedJson;
+        }
+
+        // 刷新文件列表（模拟API调用）
+        function refreshFileList() {
+            statusMessage.textContent = '正在从服务器获取最新文件列表...';
+            statusMessage.className = 'status';
+            
+            // 模拟网络延迟
+            setTimeout(() => {
+                // 在实际应用中，这里会是一个跨域API调用
+                // 例如：fetch('https://api.yourserver.com/files', { mode: 'cors' })
+                
+                // 模拟成功响应
+                statusMessage.textContent = '文件列表已成功更新！';
+                statusMessage.className = 'status success';
+                
+                // 在实际应用中，这里会使用从服务器获取的数据
+                renderFileList(mockFileData.data.files);
+                displayJson(mockFileData);
+            }, 1000);
+        }
+
+        // 切换JSON视图的显示/隐藏
+        function toggleJsonView() {
+            if (jsonViewer.style.display === 'none') {
+                jsonViewer.style.display = 'block';
+                viewJsonBtn.innerHTML = '<i class="fas fa-eye-slash"></i> 隐藏JSON数据';
+            } else {
+                jsonViewer.style.display = 'none';
+                viewJsonBtn.innerHTML = '<i class="fas fa-code"></i> 查看JSON数据';
+            }
+        }
+
+        // 模拟跨域API调用函数
+        function fetchFilesFromServer() {
+            // 在实际部署中，这个函数会向Cloudflare Worker发送请求
+            // 该Worker会处理CORS头并返回文件数据
+            
+            // 示例代码：
+            /*
+            return fetch('https://your-worker.your-domain.workers.dev/api/files', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                mode: 'cors' // 确保跨域请求
+            })
+            .then(response => response.json())
+            .then(data => {
+                return data;
+            })
+            .catch(error => {
+                console.error('Error fetching files:', error);
+                return { status: "error", message: "无法获取文件列表" };
+            });
+            */
+        }
+    </script>
+</body>
+</html>
