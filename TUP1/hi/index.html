@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>芙芙和呐呐的服务器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: #0a0a16 url('1.jpg') no-repeat center center;
+            background-size: cover;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1000px;
+        }
+        
+        /* 文字动画 */
+        .floating-text {
+            position: absolute;
+            top: 20%; /* 文字更靠上位置 */
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 4rem;
+            text-align: center;
+            text-shadow: 
+                0 0 10px rgba(179, 89, 255, 0.8),
+                0 0 20px rgba(129, 179, 255, 0.6),
+                0 0 30px rgba(100, 255, 218, 0.4);
+            letter-spacing: 3px;
+            animation: fadeInFloat 2.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            will-change: transform, opacity;
+            padding: 20px;
+            border-radius: 20px;
+            background: rgba(10, 15, 35, 0.25);
+            backdrop-filter: blur(5px);
+            z-index: 5;
+        }
+        
+        @keyframes fadeInFloat {
+            0% {
+                transform: translateX(-50%) translateY(0) scale(0.9);
+                opacity: 0;
+            }
+            50% {
+                transform: translateX(-50%) translateY(-30px) scale(1.05);
+                opacity: 1;
+                text-shadow: 
+                    0 0 15px rgba(179, 89, 255, 1),
+                    0 0 30px rgba(129, 179, 255, 0.8),
+                    0 0 45px rgba(100, 255, 218, 0.6);
+            }
+            100% {
+                transform: translateX(-50%) translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+        
+        /* 按钮设计 */
+        #enter-button {
+            position: absolute;
+            top: 55%; /* 与文字位置协调 */
+            left: 50%;
+            transform: translateX(-50%) translateY(30px);
+            opacity: 0;
+            padding: 16px 48px;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, 
+                rgba(179, 89, 255, 0.8) 0%, 
+                rgba(129, 179, 255, 0.9) 50%, 
+                rgba(100, 255, 218, 0.8) 100%);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 
+                0 0 20px rgba(179, 89, 255, 0.5),
+                0 5px 30px rgba(0, 0, 0, 0.3);
+            transition: 
+                transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55),
+                opacity 1s ease,
+                background 0.3s,
+                box-shadow 0.3s;
+            will-change: transform, opacity;
+            z-index: 10;
+        }
+        
+        #enter-button:hover {
+            transform: translateX(-50%) scale(1.08);
+            background: linear-gradient(135deg, 
+                rgba(189, 99, 255, 0.9) 0%, 
+                rgba(149, 199, 255, 0.95) 50%, 
+                rgba(120, 255, 228, 0.85) 100%);
+            box-shadow: 
+                0 0 30px rgba(179, 89, 255, 0.8),
+                0 8px 40px rgba(0, 0, 0, 0.4);
+            animation: pulse 1.5s infinite alternate;
+        }
+        
+        #enter-button:active {
+            transform: translateX(-50%) scale(0.95);
+            box-shadow: 
+                0 0 15px rgba(179, 89, 255, 0.6),
+                0 2px 20px rgba(0, 0, 0, 0.3) inset;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 20px rgba(179, 89, 255, 0.5), 0 5px 30px rgba(0, 0, 0, 0.3); }
+            100% { box-shadow: 0 0 40px rgba(179, 89, 255, 0.9), 0 10px 50px rgba(0, 0, 0, 0.5); }
+        }
+        
+        /* 背景遮罩层 */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, 
+                rgba(10, 10, 35, 0.2) 0%,
+                rgba(5, 2, 15, 0.8) 100%);
+            z-index: 1;
+        }
+        
+        /* 科技感特效容器 */
+        .tech-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 1;
+        }
+        
+        /* 科技感元素 */
+        .tech-element {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(100, 255, 218, 0.15);
+            box-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
+            filter: blur(1px);
+            animation: techFloat linear infinite;
+            will-change: transform;
+            z-index: 1;
+        }
+        
+        .tech-element::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 50%;
+            height: 50%;
+            background: rgba(179, 89, 255, 0.4);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .tech-element::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 25%;
+            height: 25%;
+            background: rgba(129, 179, 255, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        @keyframes techFloat {
+            0% { transform: translateY(0) translateX(0); }
+            50% { transform: translateY(-5px) translateX(5px); }
+            100% { transform: translateY(0) translateX(0); }
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .floating-text {
+                font-size: 2.5rem;
+                top: 15%; /* 移动端位置微调 */
+            }
+            
+            #enter-button {
+                top: 50%; /* 移动端位置微调 */
+                font-size: 1.3rem;
+                padding: 14px 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 背景遮罩层 -->
+    <div class="overlay"></div>
+    
+    <!-- 科技感特效容器 -->
+    <div class="tech-effect" id="techEffect"></div>
+    
+    <!-- 动态上浮文字 -->
+    <div class="floating-text">芙芙和呐呐的服务器呦</div>
+    
+    <!-- 进入按钮 -->
+    <button id="enter-button">进入我们的主页</button>
+    
+    <script>
+        // 按钮延迟显示逻辑
+        setTimeout(() => {
+            const button = document.getElementById('enter-button');
+            button.style.opacity = "1";
+            button.style.transform = "translateX(-50%)";
+            
+            button.addEventListener('mousemove', (e) => {
+                const rect = button.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / rect.width - 0.5;
+                const y = (e.clientY - rect.top) / rect.height - 0.5;
+                
+                button.style.transform = `translateX(-50%) translateY(${y * -4}px) rotate(${x * 3}deg)`;
+            });
+            
+            button.addEventListener('mouseleave', () => {
+                button.style.transform = "translateX(-50%)";
+            });
+        }, 2800); // 2.8秒后显示按钮
+        
+        // 按钮点击跳转（修复this指向问题）
+        document.getElementById('enter-button').addEventListener('click', function() {
+            // 使用this指向按钮本身，或用event.target
+            this.style.transform = "translateX(-50%) scale(0.95)";
+            setTimeout(() => {
+                window.location.href = 'home.html'; // 跳转到主页
+            }, 300);
+        });
+        
+        // 创建科技感特效
+        function createTechEffects() {
+            const container = document.getElementById('techEffect');
+            const count = Math.min(25, Math.floor(window.innerWidth / 80)); // 计算适合的数量
+            
+            for (let i = 0; i < count; i++) {
+                const element = document.createElement('div');
+                element.classList.add('tech-element');
+                
+                // 随机位置和大小
+                const size = Math.random() * 30 + 5; // 5px-35px
+                const posX = Math.random() * 90 + 5; // 5%-95%
+                const posY = Math.random() * 90 + 5; // 5%-95%
+                const delay = Math.random() * 5;
+                const duration = Math.random() * 3 + 3; // 3-6秒
+                
+                element.style.width = `${size}px`;
+                element.style.height = `${size}px`;
+                element.style.left = `${posX}%`;
+                element.style.top = `${posY}%`;
+                element.style.animationDuration = `${duration}s`;
+                element.style.animationDelay = `${delay}s`;
+                element.style.opacity = Math.random() * 0.3 + 0.4;
+                
+                container.appendChild(element);
+            }
+        }
+        
+        // 初始化页面
+        window.addEventListener('load', () => {
+            createTechEffects();
+        });
+    </script>
+</body>
+</html>
