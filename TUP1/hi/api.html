@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepSeek API 专业调用界面</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --accent-color: #3b82f6;
+            --light-color: #f3f4f6;
+            --dark-color: #1f2937;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+            --warning-color: #f59e0b;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f172a, #1e293b);
+            color: var(--light-color);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logo-icon {
+            font-size: 24px;
+            color: var(--accent-color);
+        }
+        
+        .logo-text {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--accent-color), #93c5fd);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .btn {
+            padding: 10px 15px;
+            background: rgba(30, 41, 59, 0.7);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .btn:hover {
+            background: rgba(30, 41, 59, 0.9);
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, var(--error-color), #b91c1c);
+        }
+        
+        .hamburger {
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--accent-color);
+            transition: var(--transition);
+        }
+        
+        .hamburger:hover {
+            transform: rotate(90deg);
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 900px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .sidebar {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            box-shadow: var(--box-shadow);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+        
+        .chat-header {
+            padding: 15px 20px;
+            background: rgba(30, 41, 59, 0.5);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .chat-box {
+            flex-grow: 1;
+            height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .message {
+            padding: 15px;
+            border-radius: var(--border-radius);
+            max-width: 85%;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .user-message {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.3), rgba(30, 64, 175, 0.3));
+            align-self: flex-end;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .assistant-message {
+            background: rgba(30, 41, 59, 0.5);
+            align-self: flex-start;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .message-content {
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        
+        .typing-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            margin-right: 4px;
+            opacity: 0.7;
+            animation: pulse 1.5s infinite;
+        }
+        
+        .typing-indicator:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-indicator:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.2); opacity: 1; }
+        }
+        
+        .input-area {
+            padding: 15px;
+            background: rgba(30, 41, 59, 0.5);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .input-container textarea {
+            flex-grow: 1;
+            padding: 12px 15px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--border-radius);
+            color: white;
+            font-size: 16px;
+            resize: vertical;
+            min-height: 80px;
+            transition: var(--transition);
+        }
+        
+        .input-container textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+        
+        .token-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #93c5fd;
+        }
+        
+        .search-container {
+            margin-bottom: 20px;
+        }
+        
+        .search-box {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .search-box input {
+            flex-grow: 1;
+            padding: 12px 15px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--border-radius);
+            color: white;
+            font-size: 16px;
+        }
+        
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+        
+        .settings-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 380px;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.3);
+            overflow-y: auto;
+            transition: var(--transition);
+            z-index: 1000;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .settings-panel.active {
+            right: 0;
+        }
+        
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .close-settings {
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--accent-color);
+        }
+        
+        .section-title {
+            font-size: 1.2rem;
+            margin: 25px 0 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--accent-color);
+        }
+        
+        .section-title:first-child {
+            margin-top: 0;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #cbd5e1;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--border-radius);
+            color: white;
+            font-size: 16px;
+            transition: var(--transition);
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+        
+        input[type="range"] {
+            height: 5px;
+            background: rgba(59, 130, 246, 0.3);
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+        }
+        
+        .range-values {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            font-size: 14px;
+            color: #93c5fd;
+        }
+        
+        .param-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        @media (max-width: 992px) {
+            .param-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .alert-error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fecaca;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .alert-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: #a7f3d0;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .code-block {
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(30, 41, 59, 0.7);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: var(--transition);
+        }
+        
+        .copy-btn:hover {
+            background: rgba(59, 130, 246, 0.5);
+        }
+        
+        .message-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .action-btn {
+            background: rgba(30, 41, 59, 0.5);
+            color: #93c5fd;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        
+        .action-btn:hover {
+            background: rgba(59, 130, 246, 0.3);
+        }
+        
+        .search-results {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .search-result {
+            padding: 10px;
+            background: rgba(30, 41, 59, 0.3);
+            border-radius: var(--border-radius);
+            margin-bottom: 10px;
+            transition: var(--transition);
+        }
+        
+        .search-result:hover {
+            background: rgba(59, 130, 246, 0.2);
+        }
+        
+        .search-result a {
+            color: #93c5fd;
+            text-decoration: none;
+        }
+        
+        .search-result a:hover {
+            text-decoration: underline;
+        }
+        
+        .search-result-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .search-result-snippet {
+            font-size: 14px;
+            color: #cbd5e1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-brain logo-icon"></i>
+                <div class="logo-text">DeepSeek API</div>
+            </div>
+            <div class="header-controls">
+                <button class="btn" id="clearChat">
+                    <i class="fas fa-trash"></i> 清除对话
+                </button>
+                <button class="btn btn-primary" id="saveConfig">
+                    <i class="fas fa-save"></i> 保存配置
+                </button>
+                <div class="hamburger" id="hamburgerMenu">
+                    <i class="fas fa-bars"></i>
+                </div>
+            </div>
+        </header>
+        
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="search-container">
+                    <div class="section-title">联网搜索</div>
+                    <div class="search-box">
+                        <input type="text" id="searchQuery" placeholder="输入搜索内容...">
+                        <button class="btn btn-primary" id="searchBtn">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <div class="search-results" id="searchResults"></div>
+                </div>
+                
+                <div class="section-title">API 信息</div>
+                <div class="form-group">
+                    <label for="apiKey">API 密钥 <span style="color: var(--error-color)">*</span></label>
+                    <input type="password" id="apiKey" placeholder="输入您的DeepSeek API密钥">
+                </div>
+                
+                <div class="form-group">
+                    <label for="model">模型选择</label>
+                    <select id="model">
+                        <option value="deepseek-chat">deepseek-chat (非思考模式)</option>
+                        <option value="deepseek-reasoner">deepseek-reasoner (思考模式)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="chat-container">
+                <div class="chat-header">
+                    <div class="section-title">与DeepSeek对话</div>
+                </div>
+                
+                <div class="chat-box" id="chatBox">
+                    <div class="message assistant-message">
+                        <div class="message-header">
+                            <i class="fas fa-robot"></i>
+                            <span>DeepSeek助手</span>
+                        </div>
+                        <div class="message-content">
+                            您好！我是DeepSeek助手，您可以在这里：
+                            <ul>
+                                <li>输入API密钥调用DeepSeek API</li>
+                                <li>通过右上角菜单调整各种参数</li>
+                                <li>使用联网搜索功能获取最新信息</li>
+                                <li>体验逐字显示的流式输出效果</li>
+                            </ul>
+                            请开始您的对话吧！
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="input-area">
+                    <div class="input-container">
+                        <textarea id="userInput" placeholder="输入您的消息..."></textarea>
+                        <button class="btn btn-primary" id="sendMessage">
+                            <i class="fas fa-paper-plane"></i> 发送
+                        </button>
+                    </div>
+                    <div class="token-info">
+                        <span>提示令牌: <span id="promptTokens">0</span></span>
+                        <span>完成令牌: <span id="completionTokens">0</span></span>
+                        <span>总令牌: <span id="totalTokens">0</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-header">
+            <h2>高级参数设置</h2>
+            <div class="close-settings" id="closeSettings">
+                <i class="fas fa-times"></i>
+            </div>
+        </div>
+        
+        <div class="alert alert-error" id="errorAlert"></div>
+        <div class="alert alert-success" id="successAlert"></div>
+        
+        <div class="section-title">参数调整</div>
+        <div class="param-grid">
+            <div class="form-group">
+                <label for="temperature">Temperature (温度: <span id="temperatureValue">0.7</span>)</label>
+                <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7">
+                <div class="range-values">
+                    <span>0 (确定性)</span>
+                    <span>2 (创造性)</span>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="maxTokens">最大令牌数: <span id="maxTokensValue">1024</span></label>
+                <input type="range" id="maxTokens" min="1" max="4096" step="1" value="1024">
+                <div class="range-values">
+                    <span>1</span>
+                    <span>4096</span>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="topP">Top P (核采样: <span id="topPValue">0.9</span>)</label>
+                <input type="range" id="topP" min="0" max="1" step="0.05" value="0.9">
+                <div class="range-values">
+                    <span>0</span>
+                    <span>1</span>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="frequencyPenalty">频率惩罚: <span id="frequencyPenaltyValue">0.0</span></label>
+                <input type="range" id="frequencyPenalty" min="-2" max="2" step="0.1" value="0.0">
+                <div class="range-values">
+                    <span>-2</span>
+                    <span>2</span>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="presencePenalty">存在惩罚: <span id="presencePenaltyValue">0.0</span></label>
+                <input type="range" id="presencePenalty" min="-2" max="2" step="0.1" value="0.0">
+                <div class="range-values">
+                    <span>-2</span>
+                    <span>2</span>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="stream">流式输出</label>
+                <select id="stream">
+                    <option value="false">否</option>
+                    <option value="true" selected>是</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="section-title">系统提示</div>
+        <div class="form-group">
+            <textarea id="systemPrompt" placeholder="系统角色设定（可选）">你是一个乐于助人的AI助手，使用简洁明了的语言回答用户问题。</textarea>
+        </div>
+        
+        <div class="section-title">其他设置</div>
+        <div class="form-group">
+            <label for="responseSpeed">响应速度</label>
+            <select id="responseSpeed">
+                <option value="fast">快速</option>
+                <option value="medium" selected>中等</option>
+                <option value="slow">慢速</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="theme">界面主题</label>
+            <select id="theme">
+                <option value="dark">深色</option>
+                <option value="light">浅色</option>
+                <option value="blue">蓝色</option>
+            </select>
+        </div>
+        
+        <button class="btn btn-primary" id="applySettings">
+            <i class="fas fa-check"></i> 应用设置
+        </button>
+        <button class="btn" id="resetSettings">
+            <i class="fas fa-undo"></i> 重置默认值
+        </button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取DOM元素
+            const apiKeyInput = document.getElementById('apiKey');
+            const modelSelect = document.getElementById('model');
+            const temperatureInput = document.getElementById('temperature');
+            const temperatureValue = document.getElementById('temperatureValue');
+            const maxTokensInput = document.getElementById('maxTokens');
+            const maxTokensValue = document.getElementById('maxTokensValue');
+            const topPInput = document.getElementById('topP');
+            const topPValue = document.getElementById('topPValue');
+            const frequencyPenaltyInput = document.getElementById('frequencyPenalty');
+            const frequencyPenaltyValue = document.getElementById('frequencyPenaltyValue');
+            const presencePenaltyInput = document.getElementById('presencePenalty');
+            const presencePenaltyValue = document.getElementById('presencePenaltyValue');
+            const streamSelect = document.getElementById('stream');
+            const systemPromptInput = document.getElementById('systemPrompt');
+            const saveConfigButton = document.getElementById('saveConfig');
+            const clearChatButton = document.getElementById('clearChat');
+            const chatBox = document.getElementById('chatBox');
+            const userInput = document.getElementById('userInput');
+            const sendMessageButton = document.getElementById('sendMessage');
+            const errorAlert = document.getElementById('errorAlert');
+            const successAlert = document.getElementById('successAlert');
+            const promptTokensSpan = document.getElementById('promptTokens');
+            const completionTokensSpan = document.getElementById('completionTokens');
+            const totalTokensSpan = document.getElementById('totalTokens');
+            const hamburgerMenu = document.getElementById('hamburgerMenu');
+            const settingsPanel = document.getElementById('settingsPanel');
+            const closeSettings = document.getElementById('closeSettings');
+            const applySettingsButton = document.getElementById('applySettings');
+            const resetSettingsButton = document.getElementById('resetSettings');
+            const searchQueryInput = document.getElementById('searchQuery');
+            const searchBtn = document.getElementById('searchBtn');
+            const searchResults = document.getElementById('searchResults');
+            
+            // 初始化滑块显示值
+            updateSliderValues();
+            
+            // 从本地存储加载配置
+            loadConfig();
+            
+            // 事件监听器
+            temperatureInput.addEventListener('input', () => {
+                temperatureValue.textContent = temperatureInput.value;
+            });
+            
+            maxTokensInput.addEventListener('input', () => {
+                maxTokensValue.textContent = maxTokensInput.value;
+            });
+            
+            topPInput.addEventListener('input', () => {
+                topPValue.textContent = topPInput.value;
+            });
+            
+            frequencyPenaltyInput.addEventListener('input', () => {
+                frequencyPenaltyValue.textContent = frequencyPenaltyInput.value;
+            });
+            
+            presencePenaltyInput.addEventListener('input', () => {
+                presencePenaltyValue.textContent = presencePenaltyInput.value;
+            });
+            
+            saveConfigButton.addEventListener('click', saveConfig);
+            clearChatButton.addEventListener('click', clearChat);
+            sendMessageButton.addEventListener('click', sendMessage);
+            userInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            hamburgerMenu.addEventListener('click', () => {
+                settingsPanel.classList.add('active');
+            });
+            
+            closeSettings.addEventListener('click', () => {
+                settingsPanel.classList.remove('active');
+            });
+            
+            applySettingsButton.addEventListener('click', () => {
+                saveConfig();
+                settingsPanel.classList.remove('active');
+            });
+            
+            resetSettingsButton.addEventListener('click', resetConfig);
+            
+            searchBtn.addEventListener('click', performSearch);
+            searchQueryInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+            
+            // 更新滑块值显示
+            function updateSliderValues() {
+                temperatureValue.textContent = temperatureInput.value;
+                maxTokensValue.textContent = maxTokensInput.value;
+                topPValue.textContent = topPInput.value;
+                frequencyPenaltyValue.textContent = frequencyPenaltyInput.value;
+                presencePenaltyValue.textContent = presencePenaltyInput.value;
+            }
+            
+            // 保存配置到本地存储
+            function saveConfig() {
+                const config = {
+                    apiKey: apiKeyInput.value,
+                    model: modelSelect.value,
+                    temperature: parseFloat(temperatureInput.value),
+                    maxTokens: parseInt(maxTokensInput.value),
+                    topP: parseFloat(topPInput.value),
+                    frequencyPenalty: parseFloat(frequencyPenaltyInput.value),
+                    presencePenalty: parseFloat(presencePenaltyInput.value),
+                    stream: streamSelect.value === 'true',
+                    systemPrompt: systemPromptInput.value
+                };
+                
+                localStorage.setItem('deepseekConfig', JSON.stringify(config));
+                showAlert('配置已保存！', 'success');
+            }
+            
+            // 从本地存储加载配置
+            function loadConfig() {
+                const savedConfig = localStorage.getItem('deepseekConfig');
+                if (savedConfig) {
+                    const config = JSON.parse(savedConfig);
+                    
+                    apiKeyInput.value = config.apiKey || '';
+                    modelSelect.value = config.model || 'deepseek-chat';
+                    temperatureInput.value = config.temperature || 0.7;
+                    maxTokensInput.value = config.maxTokens || 1024;
+                    topPInput.value = config.topP || 0.9;
+                    frequencyPenaltyInput.value = config.frequencyPenalty || 0.0;
+                    presencePenaltyInput.value = config.presencePenalty || 0.0;
+                    streamSelect.value = config.stream ? 'true' : 'false';
+                    systemPromptInput.value = config.systemPrompt || '你是一个乐于助人的AI助手，使用简洁明了的语言回答用户问题。';
+                    
+                    updateSliderValues();
+                }
+                
+                const savedChat = localStorage.getItem('deepseekChatHistory');
+                if (savedChat) {
+                    const messages = JSON.parse(savedChat);
+                    messages.forEach(msg => {
+                        addMessageToChat(msg.role, msg.content, false);
+                    });
+                }
+            }
+            
+            // 重置为默认配置
+            function resetConfig() {
+                if (confirm('确定要重置所有设置为默认值吗？')) {
+                    localStorage.removeItem('deepseekConfig');
+                    
+                    modelSelect.value = 'deepseek-chat';
+                    temperatureInput.value = 0.7;
+                    maxTokensInput.value = 1024;
+                    topPInput.value = 0.9;
+                    frequencyPenaltyInput.value = 0.0;
+                    presencePenaltyInput.value = 0.0;
+                    streamSelect.value = 'true';
+                    systemPromptInput.value = '你是一个乐于助人的AI助手，使用简洁明了的语言回答用户问题。';
+                    
+                    updateSliderValues();
+                    showAlert('配置已重置为默认值！', 'success');
+                }
+            }
+            
+            // 清除聊天记录
+            function clearChat() {
+                if (confirm('确定要清除所有聊天记录吗？')) {
+                    chatBox.innerHTML = '';
+                    localStorage.removeItem('deepseekChatHistory');
+                    resetTokenCount();
+                    
+                    // 添加欢迎消息
+                    addMessageToChat('assistant', 
+                        '您好！我是DeepSeek助手，您可以在这里：\n' +
+                        '- 输入API密钥调用DeepSeek API\n' +
+                        '- 通过右上角菜单调整各种参数\n' +
+                        '- 使用联网搜索功能获取最新信息\n' +
+                        '- 体验逐字显示的流式输出效果\n\n' +
+                        '请开始您的对话吧！'
+                    );
+                }
+            }
+            
+            // 显示提示信息
+            function showAlert(message, type) {
+                const alert = type === 'error' ? errorAlert : successAlert;
+                alert.textContent = message;
+                alert.style.display = 'block';
+                
+                setTimeout(() => {
+                    alert.style.display = 'none';
+                }, 3000);
+            }
+            
+            // 发送消息到DeepSeek API
+            async function sendMessage() {
+                const apiKey = apiKeyInput.value.trim();
+                const message = userInput.value.trim();
+                
+                if (!apiKey) {
+                    showAlert('请输入API密钥！', 'error');
+                    return;
+                }
+                
+                if (!message) {
+                    showAlert('请输入消息内容！', 'error');
+                    return;
+                }
+                
+                // 添加用户消息到聊天框
+                addMessageToChat('user', message);
+                userInput.value = '';
+                
+                // 禁用发送按钮
+                sendMessageButton.disabled = true;
+                sendMessageButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 发送中';
+                
+                try {
+                    // 添加助手消息占位符
+                    const assistantMessageId = 'assistant-' + Date.now();
+                    addMessageToChat('assistant', '<div class="typing-indicator"></div><div class="typing-indicator"></div><div class="typing-indicator"></div>', false, assistantMessageId);
+                    
+                    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: modelSelect.value,
+                            messages: [
+                                { role: 'system', content: systemPromptInput.value },
+                                ...getChatHistory(),
+                                { role: 'user', content: message }
+                            ],
+                            temperature: parseFloat(temperatureInput.value),
+                            max_tokens: parseInt(maxTokensInput.value),
+                            top_p: parseFloat(topPInput.value),
+                            frequency_penalty: parseFloat(frequencyPenaltyInput.value),
+                            presence_penalty: parseFloat(presencePenaltyInput.value),
+                            stream: streamSelect.value === 'true'
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error?.message || `HTTP错误: ${response.status}`);
+                    }
+                    
+                    // 流式输出处理
+                    if (streamSelect.value === 'true') {
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder();
+                        let assistantMessage = '';
+                        
+                        while (true) {
+                            const { value, done } = await reader.read();
+                            if (done) break;
+                            
+                            const chunk = decoder.decode(value);
+                            const lines = chunk.split('\n').filter(line => line.trim() !== '');
+                            
+                            for (const line of lines) {
+                                const message = line.replace(/^data: /, '');
+                                if (message === '[DONE]') {
+                                    break;
+                                }
+                                
+                                try {
+                                    const parsed = JSON.parse(message);
+                                    if (parsed.choices && parsed.choices[0].delta && parsed.choices[0].delta.content) {
+                                        assistantMessage += parsed.choices[0].delta.content;
+                                        updateAssistantMessage(assistantMessageId, assistantMessage);
+                                    }
+                                } catch (error) {
+                                    console.error('解析JSON失败:', error);
+                                }
+                            }
+                        }
+                        
+                        // 更新最终消息
+                        updateAssistantMessage(assistantMessageId, assistantMessage);
+                        
+                        // 保存聊天记录
+                        saveChatHistory();
+                    } else {
+                        const data = await response.json();
+                        const assistantMessage = data.choices[0].message.content;
+                        
+                        // 更新助手消息
+                        updateAssistantMessage(assistantMessageId, assistantMessage);
+                        
+                        // 更新令牌计数
+                        updateTokenCount(data.usage);
+                        
+                        // 保存聊天记录
+                        saveChatHistory();
+                    }
+                    
+                } catch (error) {
+                    console.error('API调用错误:', error);
+                    showAlert(`错误: ${error.message}`, 'error');
+                    updateAssistantMessage(assistantMessageId, `无法获取响应: ${error.message}`);
+                } finally {
+                    // 重新启用发送按钮
+                    sendMessageButton.disabled = false;
+                    sendMessageButton.innerHTML = '<i class="fas fa-paper-plane"></i> 发送';
+                }
+            }
+            
+            // 添加消息到聊天框
+            function addMessageToChat(role, content, isCode = false, id = null) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${role}-message`;
+                if (id) messageDiv.id = id;
+                
+                const messageHeader = document.createElement('div');
+                messageHeader.className = 'message-header';
+                
+                const icon = document.createElement('i');
+                icon.className = role === 'user' ? 'fas fa-user' : 'fas fa-robot';
+                
+                const roleName = document.createElement('span');
+                roleName.textContent = role === 'user' ? '您' : 'DeepSeek助手';
+                
+                messageHeader.appendChild(icon);
+                messageHeader.appendChild(roleName);
+                
+                const messageContent = document.createElement('div');
+                messageContent.className = 'message-content';
+                
+                if (isCode) {
+                    const codeBlock = document.createElement('div');
+                    codeBlock.className = 'code-block';
+                    
+                    const codePre = document.createElement('pre');
+                    codePre.textContent = content;
+                    
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'copy-btn';
+                    copyBtn.innerHTML = '<i class="fas fa-copy"></i> 复制';
+                    copyBtn.addEventListener('click', () => {
+                        navigator.clipboard.writeText(content);
+                        copyBtn.innerHTML = '<i class="fas fa-check"></i> 已复制';
+                        setTimeout(() => {
+                            copyBtn.innerHTML = '<i class="fas fa-copy"></i> 复制';
+                        }, 2000);
+                    });
+                    
+                    codeBlock.appendChild(codePre);
+                    codeBlock.appendChild(copyBtn);
+                    messageContent.appendChild(codeBlock);
+                } else {
+                    messageContent.innerHTML = content;
+                }
+                
+                messageDiv.appendChild(messageHeader);
+                messageDiv.appendChild(messageContent);
+                
+                // 添加消息操作按钮
+                if (role === 'assistant') {
+                    const messageActions = document.createElement('div');
+                    messageActions.className = 'message-actions';
+                    
+                    const copyBtn = document.createElement('button');
+                    copyBtn.className = 'action-btn';
+                    copyBtn.innerHTML = '<i class="fas fa-copy"></i> 复制';
+                    copyBtn.addEventListener('click', () => {
+                        navigator.clipboard.writeText(content);
+                        copyBtn.innerHTML = '<i class="fas fa-check"></i> 已复制';
+                        setTimeout(() => {
+                            copyBtn.innerHTML = '<i class="fas fa-copy"></i> 复制';
+                        }, 2000);
+                    });
+                    
+                    const regenerateBtn = document.createElement('button');
+                    regenerateBtn.className = 'action-btn';
+                    regenerateBtn.innerHTML = '<i class="fas fa-redo"></i> 重新生成';
+                    regenerateBtn.addEventListener('click', () => {
+                        userInput.value = messageDiv.previousElementSibling.querySelector('.message-content').textContent;
+                        messageDiv.remove();
+                        sendMessage();
+                    });
+                    
+                    messageActions.appendChild(copyBtn);
+                    messageActions.appendChild(regenerateBtn);
+                    messageDiv.appendChild(messageActions);
+                }
+                
+                chatBox.appendChild(messageDiv);
+                
+                // 滚动到底部
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+            
+            // 更新助手消息
+            function updateAssistantMessage(id, content) {
+                const messageDiv = document.getElementById(id);
+                if (messageDiv) {
+                    const messageContent = messageDiv.querySelector('.message-content');
+                    messageContent.innerHTML = content;
+                    
+                    // 检查是否有代码块
+                    const codeBlocks = extractCodeBlocks(content);
+                    if (codeBlocks.length > 0) {
+                        messageContent.innerHTML = '';
+                        let textContent = content;
+                        
+                        // 替换代码块为格式化元素
+                        codeBlocks.forEach((code, index) => {
+                            const parts = textContent.split(`\`\`\`${code.lang}\n${code.content}\`\`\``);
+                            
+                            if (parts[0]) {
+                                const textPart = document.createElement('div');
+                                textPart.textContent = parts[0];
+                                messageContent.appendChild(textPart);
+                            }
+                            
+                            const codeBlock = document.createElement('div');
+                            codeBlock.className = 'code-block';
+                            
+                            const langLabel = document.createElement('div');
+                            langLabel.className = 'code-lang';
+                            langLabel.textContent = code.lang;
+                            
+                            const codePre = document.createElement('pre');
+                            codePre.textContent = code.content;
+                            
+                            const copyBtn = document.createElement('button');
+                            copyBtn.className = 'copy-btn';
+                            copyBtn.innerHTML = '<i class="fas fa-copy"></i> 复制';
+                            copyBtn.addEventListener('click', () => {
+                                navigator.clipboard.writeText(code.content);
+                                copyBtn.innerHTML = '<i class="fas fa-check"></i> 已复制';
+                                setTimeout(() => {
+                                    copyBtn.innerHTML = '<i class="fas fa-copy"></i> 复制';
+                                }, 2000);
+                            });
+                            
+                            codeBlock.appendChild(langLabel);
+                            codeBlock.appendChild(codePre);
+                            codeBlock.appendChild(copyBtn);
+                            messageContent.appendChild(codeBlock);
+                            
+                            textContent = parts[1] || '';
+                        });
+                        
+                        if (textContent) {
+                            const textPart = document.createElement('div');
+                            textPart.textContent = textContent;
+                            messageContent.appendChild(textPart);
+                        }
+                    }
+                }
+            }
+            
+            // 提取代码块
+            function extractCodeBlocks(content) {
+                const codeBlocks = [];
+                const regex = /```(\w+)\n([\s\S]*?)```/g;
+                let match;
+                
+                while ((match = regex.exec(content)) !== null) {
+                    codeBlocks.push({
+                        lang: match[1],
+                        content: match[2]
+                    });
+                }
+                
+                return codeBlocks;
+            }
+            
+            // 获取聊天历史
+            function getChatHistory() {
+                const messages = [];
+                const messageElements = chatBox.querySelectorAll('.message');
+                
+                messageElements.forEach(element => {
+                    if (element.classList.contains('user-message')) {
+                        const content = element.querySelector('.message-content').textContent;
+                        messages.push({ role: 'user', content });
+                    } else if (element.classList.contains('assistant-message')) {
+                        const content = element.querySelector('.message-content').textContent;
+                        messages.push({ role: 'assistant', content });
+                    }
+                });
+                
+                return messages;
+            }
+            
+            // 保存聊天记录到本地存储
+            function saveChatHistory() {
+                const messages = getChatHistory();
+                localStorage.setItem('deepseekChatHistory', JSON.stringify(messages));
+            }
+            
+            // 更新令牌计数
+            function updateTokenCount(usage) {
+                if (usage) {
+                    promptTokensSpan.textContent = usage.prompt_tokens;
+                    completionTokensSpan.textContent = usage.completion_tokens;
+                    totalTokensSpan.textContent = usage.total_tokens;
+                }
+            }
+            
+            // 重置令牌计数
+            function resetTokenCount() {
+                promptTokensSpan.textContent = '0';
+                completionTokensSpan.textContent = '0';
+                totalTokensSpan.textContent = '0';
+            }
+            
+            // 执行联网搜索
+            async function performSearch() {
+                const query = searchQueryInput.value.trim();
+                if (!query) return;
+                
+                searchResults.innerHTML = '<div class="search-result">搜索中...</div>';
+                
+                try {
+                    // 这里使用一个模拟的搜索API，实际应用中应替换为真实API
+                    const response = await fetch(`https://api.search.example.com?q=${encodeURIComponent(query)}`);
+                    const data = await response.json();
+                    
+                    searchResults.innerHTML = '';
+                    
+                    if (data.items && data.items.length > 0) {
+                        data.items.slice(0, 5).forEach(item => {
+                            const resultDiv = document.createElement('div');
+                            resultDiv.className = 'search-result';
+                            
+                            const title = document.createElement('div');
+                            title.className = 'search-result-title';
+                            
+                            const link = document.createElement('a');
+                            link.href = item.link;
+                            link.target = '_blank';
+                            link.textContent = item.title;
+                            
+                            title.appendChild(link);
+                            resultDiv.appendChild(title);
+                            
+                            const snippet = document.createElement('div');
+                            snippet.className = 'search-result-snippet';
+                            snippet.textContent = item.snippet;
+                            resultDiv.appendChild(snippet);
+                            
+                            searchResults.appendChild(resultDiv);
+                        });
+                    } else {
+                        searchResults.innerHTML = '<div class="search-result">未找到相关结果</div>';
+                    }
+                } catch (error) {
+                    console.error('搜索失败:', error);
+                    searchResults.innerHTML = '<div class="search-result">搜索失败，请稍后再试</div>';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
