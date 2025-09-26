@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S3兼容对象存储管理器</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@aws-sdk/client-s3@3.450.0/dist/umd/S3Client.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@aws-sdk/s3-request-presigner@3.450.0/dist/umd/s3-request-presigner.min.js"></script>
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #2ecc71;
+            --danger: #e74c3c;
+            --dark: #2c3e50;
+            --light: #ecf0f1;
+            --gray: #7f8c8d;
+            --shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            --radius: 15px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+        
+        h1 {
+            color: var(--dark);
+            margin-bottom: 10px;
+        }
+        
+        .description {
+            color: var(--gray);
+            font-size: 1.1rem;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 25px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            font-size: 1.3rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .card-title i {
+            margin-right: 10px;
+        }
+        
+        .upload-area {
+            border: 2px dashed var(--primary);
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+            background: rgba(52, 152, 219, 0.05);
+        }
+        
+        .upload-area:hover {
+            background: rgba(52, 152, 219, 0.1);
+        }
+        
+        .upload-area i {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+        
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn i {
+            margin-right: 8px;
+        }
+        
+        .btn-secondary {
+            background: var(--secondary);
+        }
+        
+        .btn-secondary:hover {
+            background: #27ae60;
+        }
+        
+        .btn-danger {
+            background: var(--danger);
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-list {
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            transition: all 0.2s;
+        }
+        
+        .file-item:hover {
+            background: #f9f9f9;
+        }
+        
+        .file-name {
+            display: flex;
+            align-items: center;
+            font-weight: 500;
+            flex: 1;
+        }
+        
+        .file-name i {
+            margin-right: 10px;
+            color: var(--primary);
+        }
+        
+        .file-size {
+            color: var(--gray);
+            font-size: 0.9rem;
+            margin-left: 15px;
+        }
+        
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .file-actions a {
+            color: var(--secondary);
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        .file-actions a:hover {
+            color: #27ae60;
+            text-decoration: underline;
+        }
+        
+        .file-actions .btn-link {
+            color: var(--primary);
+            background: none;
+            padding: 0;
+            margin: 0;
+            display: inline;
+            font-weight: 500;
+        }
+        
+        .file-actions .btn-link:hover {
+            background: none;
+            transform: none;
+            box-shadow: none;
+            text-decoration: underline;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: #ecf0f1;
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .progress {
+            height: 100%;
+            background: var(--secondary);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .config-form {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+        
+        .form-group input {
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            display: none;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+        }
+        
+        .status.info {
+            background: #cce5ff;
+            color: #004085;
+            display: block;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(52, 152, 219, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+        
+        .tab-container {
+            margin-bottom: 20px;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+        
+        .tab.active {
+            border-bottom: 3px solid var(--primary);
+            color: var(--primary);
+            font-weight: 500;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .url-result {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            word-break: break-all;
+            display: none;
+        }
+        
+        .url-result.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>S3兼容对象存储管理器</h1>
+            <p class="description">上传、下载和管理您的云端文件（支持雨云等兼容S3协议的对象存储）</p>
+        </header>
+        
+        <div class="tab-container">
+            <div class="tabs">
+                <div class="tab active" data-tab="config">配置设置</div>
+                <div class="tab" data-tab="upload">文件上传</div>
+                <div class="tab" data-tab="download">文件下载</div>
+            </div>
+            
+            <div class="tab-content active" id="config-tab">
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-cog"></i> 存储配置</h2>
+                    
+                    <div class="config-form">
+                        <div class="form-group">
+                            <label for="endpoint">端点 (Endpoint)</label>
+                            <input type="text" id="endpoint" placeholder="例如: https://cn-sy1.rains3.com">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="accessKey">Access Key</label>
+                            <input type="text" id="accessKey" placeholder="输入对象存储的AccessKey">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="secretKey">Secret Key</label>
+                            <input type="password" id="secretKey" placeholder="输入对象存储的SecretKey">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="bucketName">存储桶名称</label>
+                            <input type="text" id="bucketName" placeholder="输入存储桶名称">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="region">区域</label>
+                            <input type="text" id="region" placeholder="例如: rainyun" value="rainyun">
+                        </div>
+                        
+                        <button class="btn" onclick="saveConfig()">
+                            <i class="fas fa-save"></i> 保存配置
+                        </button>
+                        
+                        <button class="btn btn-secondary" onclick="testConnection()">
+                            <i class="fas fa-plug"></i> 测试连接
+                        </button>
+                    </div>
+                    
+                    <div id="configStatus" class="status"></div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="upload-tab">
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-upload"></i> 文件上传</h2>
+                    
+                    <div class="upload-area" id="dropArea">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>拖放文件到此处或点击选择文件</p>
+                        <input type="file" id="fileInput" class="file-input" multiple>
+                        <button class="btn" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-file"></i> 选择文件
+                        </button>
+                    </div>
+                    
+                    <div id="fileInfo"></div>
+                    
+                    <div class="progress-bar">
+                        <div class="progress" id="uploadProgress"></div>
+                    </div>
+                    
+                    <button class="btn btn-secondary" onclick="uploadFile()" id="uploadBtn">
+                        <i class="fas fa-cloud-upload-alt"></i> 开始上传
+                    </button>
+                    
+                    <div id="uploadStatus" class="status"></div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="download-tab">
+                <div class="card">
+                    <h2 class="card-title"><i class="fas fa-download"></i> 文件下载与管理</h2>
+                    
+                    <button class="btn" onclick="listFiles()">
+                        <i class="fas fa-sync-alt"></i> 刷新文件列表
+                    </button>
+                    
+                    <button class="btn btn-secondary" onclick="createFolder()">
+                        <i class="fas fa-folder-plus"></i> 创建文件夹
+                    </button>
+                    
+                    <div class="file-list" id="fileList">
+                        <div class="file-item">
+                            <div class="file-name"><i class="fas fa-file"></i> 示例文件.txt</div>
+                            <div class="file-size">2.5 KB</div>
+                            <div class="file-actions">
+                                <a onclick="alert('下载功能准备就绪')"><i class="fas fa-download"></i> 下载</a>
+                                <a onclick="alert('获取链接功能准备就绪')"><i class="fas fa-link"></i> 链接</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="downloadStatus" class="status"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2 class="card-title"><i class="fas fa-key"></i> 生成预签名URL</h2>
+            <p>生成一个有时效性的下载链接（有效期为1小时）</p>
+            
+            <div class="config-form">
+                <div class="form-group">
+                    <label for="filePath">文件路径</label>
+                    <input type="text" id="filePath" placeholder="输入文件在存储桶中的路径">
+                </div>
+                
+                <button class="btn" onclick="generatePresignedUrl()">
+                    <i class="fas fa-link"></i> 生成下载链接
+                </button>
+            </div>
+            
+            <div class="url-result" id="urlResult"></div>
+        </div>
+        
+        <footer>
+            <p>© 2025 S3兼容对象存储管理器 | 基于AWS SDK for JavaScript v3</p>
+        </footer>
+    </div>
+
+    <script>
+        // 初始化变量
+        let selectedFile = null;
+        let s3Client = null;
+        let currentConfig = null;
+        
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 设置标签页切换
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // 移除所有active类
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                    
+                    // 添加active类到当前标签
+                    this.classList.add('active');
+                    document.getElementById(`${this.dataset.tab}-tab`).classList.add('active');
+                });
+            });
+            
+            // 加载保存的配置
+            loadConfig();
+            
+            // 设置拖放事件
+            const dropArea = document.getElementById('dropArea');
+            dropArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                dropArea.style.background = 'rgba(52, 152, 219, 0.2)';
+            });
+            
+            dropArea.addEventListener('dragleave', function() {
+                dropArea.style.background = 'rgba(52, 152, 219, 0.05)';
+            });
+            
+            dropArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                dropArea.style.background = 'rgba(52, 152, 219, 0.05)';
+                
+                if (e.dataTransfer.files.length) {
+                    handleFiles(e.dataTransfer.files);
+                }
+            });
+            
+            // 文件输入变更事件
+            document.getElementById('fileInput').addEventListener('change', function() {
+                if (this.files.length) {
+                    handleFiles(this.files);
+                }
+            });
+        });
+        
+        // 处理选择的文件
+        function handleFiles(files) {
+            selectedFile = files[0];
+            document.getElementById('fileInfo').innerHTML = `
+                <div style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <p><strong>已选择文件:</strong> ${selectedFile.name}</p>
+                    <p><strong>大小:</strong> ${formatFileSize(selectedFile.size)}</p>
+                    <p><strong>类型:</strong> ${selectedFile.type || '未知'}</p>
+                </div>
+            `;
+        }
+        
+        // 格式化文件大小
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // 加载保存的配置
+        function loadConfig() {
+            const endpoint = localStorage.getItem('s3_endpoint');
+            const accessKey = localStorage.getItem('s3_accessKey');
+            const secretKey = localStorage.getItem('s3_secretKey');
+            const bucketName = localStorage.getItem('s3_bucketName');
+            const region = localStorage.getItem('s3_region');
+            
+            if (endpoint) document.getElementById('endpoint').value = endpoint;
+            if (accessKey) document.getElementById('accessKey').value = accessKey;
+            if (secretKey) document.getElementById('secretKey').value = secretKey;
+            if (bucketName) document.getElementById('bucketName').value = bucketName;
+            if (region) document.getElementById('region').value = region;
+            
+            // 如果有足够配置，尝试初始化S3客户端
+            if (endpoint && accessKey && secretKey && region) {
+                currentConfig = { endpoint, accessKey, secretKey, bucketName, region };
+                initS3Client();
+            }
+        }
+        
+        // 保存配置
+        function saveConfig() {
+            const endpoint = document.getElementById('endpoint').value;
+            const accessKey = document.getElementById('accessKey').value;
+            const secretKey = document.getElementById('secretKey').value;
+            const bucketName = document.getElementById('bucketName').value;
+            const region = document.getElementById('region').value;
+            
+            if (!endpoint || !accessKey || !secretKey || !bucketName || !region) {
+                showStatus('configStatus', '请填写所有配置字段', 'error');
+                return;
+            }
+            
+            localStorage.setItem('s3_endpoint', endpoint);
+            localStorage.setItem('s3_accessKey', accessKey);
+            localStorage.setItem('s3_secretKey', secretKey);
+            localStorage.setItem('s3_bucketName', bucketName);
+            localStorage.setItem('s3_region', region);
+            
+            currentConfig = { endpoint, accessKey, secretKey, bucketName, region };
+            
+            showStatus('configStatus', '配置已保存成功！', 'success');
+            
+            // 初始化S3客户端
+            initS3Client();
+        }
+        
+        // 测试连接
+        function testConnection() {
+            if (!s3Client) {
+                showStatus('configStatus', '请先保存配置并初始化S3客户端', 'error');
+                return;
+            }
+            
+            showStatus('configStatus', '<span class="loading"></span> 正在测试连接...', 'info');
+            
+            // 尝试列出存储桶以测试连接
+            const command = new S3.ListBucketsCommand({});
+            
+            s3Client.send(command)
+                .then(data => {
+                    showStatus('configStatus', `连接成功！获取到 ${data.Buckets.length} 个存储桶`, 'success');
+                })
+                .catch(err => {
+                    showStatus('configStatus', `连接失败: ${err.message}`, 'error');
+                });
+        }
+        
+        // 初始化S3客户端
+        function initS3Client() {
+            if (!currentConfig) {
+                console.error('没有有效的配置');
+                return;
+            }
+            
+            try {
+                s3Client = new S3.S3Client({
+                    region: currentConfig.region,
+                    endpoint: currentConfig.endpoint,
+                    credentials: {
+                        accessKeyId: currentConfig.accessKey,
+                        secretAccessKey: currentConfig.secretKey
+                    },
+                    forcePathStyle: true
+                });
+                
+                showStatus('configStatus', 'S3客户端初始化成功！', 'success');
+                console.log('S3客户端已初始化');
+            } catch (err) {
+                showStatus('configStatus', `S3客户端初始化失败: ${err.message}`, 'error');
+                console.error('初始化S3客户端失败:', err);
+            }
+        }
+        
+        // 上传文件
+        function uploadFile() {
+            if (!selectedFile) {
+                showStatus('uploadStatus', '请先选择一个文件', 'error');
+                return;
+            }
+            
+            if (!s3Client) {
+                showStatus('uploadStatus', '请先保存配置并初始化S3客户端', 'error');
+                return;
+            }
+            
+            // 禁用上传按钮，防止重复点击
+            document.getElementById('uploadBtn').disabled = true;
+            
+            // 显示上传状态
+            showStatus('uploadStatus', '<span class="loading"></span> 正在上传文件...', 'info');
+            
+            // 创建上传参数
+            const params = {
+                Bucket: currentConfig.bucketName,
+                Key: selectedFile.name,
+                Body: selectedFile,
+                ContentType: selectedFile.type
+            };
+            
+            // 创建上传命令
+            const command = new S3.PutObjectCommand(params);
+            
+            // 执行上传
+            s3Client.send(command)
+                .then(data => {
+                    showStatus('uploadStatus', '文件上传成功！', 'success');
+                    document.getElementById('uploadProgress').style.width = '100%';
+                    
+                    // 清空文件选择
+                    selectedFile = null;
+                    document.getElementById('fileInfo').innerHTML = '';
+                    document.getElementById('uploadBtn').disabled = false;
+                    
+                    // 刷新文件列表
+                    listFiles();
+                })
+                .catch(err => {
+                    showStatus('uploadStatus', `上传失败: ${err.message}`, 'error');
+                    document.getElementById('uploadBtn').disabled = false;
+                });
+            
+            // 模拟进度更新（实际中需使用分片上传或其它方式获取真实进度）
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 5;
+                document.getElementById('uploadProgress').style.width = `${progress}%`;
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                }
+            }, 200);
+        }
+        
+        // 列出文件
+        function listFiles() {
+            if (!s3Client) {
+                showStatus('downloadStatus', '请先保存配置并初始化S3客户端', 'error');
+                return;
+            }
+            
+            showStatus('downloadStatus', '<span class="loading"></span> 正在获取文件列表...', 'info');
+            
+            // 创建命令列出存储桶中的对象
+            const command = new S3.ListObjectsV2Command({
+                Bucket: currentConfig.bucketName
+            });
+            
+            s3Client.send(command)
+                .then(data => {
+                    const fileList = document.getElementById('fileList');
+                    fileList.innerHTML = '';
+                    
+                    if (!data.Contents || data.Contents.length === 0) {
+                        fileList.innerHTML = '<div class="file-item">存储桶为空</div>';
+                        showStatus('downloadStatus', '存储桶中没有文件', 'info');
+                        return;
+                    }
+                    
+                    data.Contents.forEach(item => {
+                        const fileItem = document.createElement('div');
+                        fileItem.className = 'file-item';
+                        
+                        const isFolder = item.Key.endsWith('/');
+                        const iconClass = isFolder ? 'fa-folder' : 'fa-file';
+                        
+                        fileItem.innerHTML = `
+                            <div class="file-name">
+                                <i class="fas ${iconClass}"></i> ${item.Key}
+                            </div>
+                            <div class="file-size">${isFolder ? '-' : formatFileSize(item.Size)}</div>
+                            <div class="file-actions">
+                                ${!isFolder ? `
+                                    <a onclick="downloadFile('${item.Key}')"><i class="fas fa-download"></i> 下载</a>
+                                    <a onclick="getPresignedUrl('${item.Key}')"><i class="fas fa-link"></i> 链接</a>
+                                ` : ''}
+                            </div>
+                        `;
+                        
+                        fileList.appendChild(fileItem);
+                    });
+                    
+                    showStatus('downloadStatus', `已加载 ${data.Contents.length} 个文件/文件夹`, 'success');
+                })
+                .catch(err => {
+                    showStatus('downloadStatus', `获取文件列表失败: ${err.message}`, 'error');
+                });
+        }
+        
+        // 下载文件
+        function downloadFile(key) {
+            if (!s3Client) {
+                alert('请先初始化S3客户端');
+                return;
+            }
+            
+            // 创建获取对象的命令
+            const command = new S3.GetObjectCommand({
+                Bucket: currentConfig.bucketName,
+                Key: key
+            });
+            
+            // 执行命令获取文件
+            s3Client.send(command)
+                .then(data => {
+                    // 将数据转换为Blob
+                    return data.Body.transformToByteArray()
+                        .then(byteArray => {
+                            const blob = new Blob([byteArray]);
+                            const url = URL.createObjectURL(blob);
+                            
+                            // 创建下载链接
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = key;
+                            document.body.appendChild(a);
+                            a.click();
+                            
+                            // 清理
+                            setTimeout(() => {
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(url);
+                            }, 100);
+                        });
+                })
+                .then(() => {
+                    showStatus('downloadStatus', `文件 ${key} 下载成功`, 'success');
+                })
+                .catch(err => {
+                    showStatus('downloadStatus', `下载失败: ${err.message}`, 'error');
+                });
+        }
+        
+        // 生成预签名URL
+        function generatePresignedUrl() {
+            const filePath = document.getElementById('filePath').value;
+            if (!filePath) {
+                alert('请输入文件路径');
+                return;
+            }
+            
+            getPresignedUrl(filePath);
+        }
+        
+        // 获取预签名URL
+        function getPresignedUrl(key) {
+            if (!s3Client) {
+                alert('请先初始化S3客户端');
+                return;
+            }
+            
+            // 创建获取对象的命令
+            const command = new S3.GetObjectCommand({
+                Bucket: currentConfig.bucketName,
+                Key: key
+            });
+            
+            // 设置有效期为一小时
+            const expTime = 60 * 60;
+            
+            // 生成预签名URL
+            S3RequestPresigner.getSignedUrl(s3Client, command, { expiresIn: expTime })
+                .then(url => {
+                    document.getElementById('filePath').value = key;
+                    const urlResult = document.getElementById('urlResult');
+                    urlResult.innerHTML = `
+                        <p><strong>预签名URL (有效期1小时):</strong></p>
+                        <p><a href="${url}" target="_blank">${url}</a></p>
+                        <button class="btn" onclick="copyToClipboard('${url}')">
+                            <i class="fas fa-copy"></i> 复制链接
+                        </button>
+                    `;
+                    urlResult.classList.add('active');
+                })
+                .catch(err => {
+                    alert(`生成预签名URL失败: ${err.message}`);
+                });
+        }
+        
+        // 创建文件夹
+        function createFolder() {
+            const folderName = prompt('请输入文件夹名称:');
+            if (!folderName) return;
+            
+            // 确保文件夹名称以斜杠结尾
+            let key = folderName;
+            if (!key.endsWith('/')) {
+                key += '/';
+            }
+            
+            if (!s3Client) {
+                showStatus('downloadStatus', '请先初始化S3客户端', 'error');
+                return;
+            }
+            
+            // 创建命令上传一个空对象代表文件夹
+            const command = new S3.PutObjectCommand({
+                Bucket: currentConfig.bucketName,
+                Key: key,
+                Body: ''
+            });
+            
+            s3Client.send(command)
+                .then(() => {
+                    showStatus('downloadStatus', `文件夹 ${key} 创建成功`, 'success');
+                    listFiles(); // 刷新文件列表
+                })
+                .catch(err => {
+                    showStatus('downloadStatus', `创建文件夹失败: ${err.message}`, 'error');
+                });
+        }
+        
+        // 复制到剪贴板
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text)
+                .then(() => {
+                    alert('链接已复制到剪贴板');
+                })
+                .catch(err => {
+                    console.error('复制失败:', err);
+                });
+        }
+        
+        // 显示状态消息
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = message;
+            element.className = 'status';
+            
+            if (type) {
+                element.classList.add(type);
+            }
+        }
+    </script>
+</body>
+</html>
