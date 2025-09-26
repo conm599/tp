@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QQ邮箱SMTP前端工具</title>
+    <script src="https://cdn.jsdelivr.net/npm/smtpjs@3.4.0/smtp.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(90deg, #1a73e8, #0d47a1);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        
+        .warning {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            margin: 20px;
+            border-radius: 8px;
+            border-left: 5px solid #f44336;
+        }
+        
+        .warning h3 {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .warning h3:before {
+            content: "⚠️";
+            margin-right: 10px;
+        }
+        
+        .form-container {
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #444;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+        
+        input:focus, textarea:focus {
+            border-color: #1a73e8;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        }
+        
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .btn {
+            background: linear-gradient(90deg, #1a73e8, #0d47a1);
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(90deg, #757575, #424242);
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+        
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border-left: 5px solid #4caf50;
+        }
+        
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            border-left: 5px solid #f44336;
+        }
+        
+        .alternative {
+            background-color: #e3f2fd;
+            padding: 20px;
+            margin-top: 30px;
+            border-radius: 8px;
+        }
+        
+        .alternative h3 {
+            color: #1565c0;
+            margin-bottom: 15px;
+        }
+        
+        .code-block {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: monospace;
+            margin: 15px 0;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                margin: 10px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>QQ邮箱SMTP前端工具</h1>
+            <p>使用SMTP.js直接连接QQ邮箱服务器</p>
+        </div>
+        
+        <div class="warning">
+            <h3>安全警告</h3>
+            <p>此工具仅用于演示目的。在前端JavaScript中硬编码邮箱授权码存在严重安全风险，任何访问您网站的用户都可以查看您的授权码，可能导致您的邮箱被滥用。生产环境中请务必使用后端服务处理邮件发送。</p>
+        </div>
+        
+        <div class="form-container">
+            <div class="form-group">
+                <label for="smtpServer">SMTP服务器</label>
+                <input type="text" id="smtpServer" value="smtp.qq.com" readonly>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">QQ邮箱地址</label>
+                <input type="email" id="email" placeholder="请输入您的QQ邮箱">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">邮箱授权码（非QQ密码）</label>
+                <input type="password" id="password" placeholder="请输入QQ邮箱授权码">
+                <small style="color: #666; display: block; margin-top: 5px;">注意：需要在QQ邮箱设置中生成SMTP授权码</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="to">收件人邮箱</label>
+                <input type="email" id="to" placeholder="请输入收件人邮箱">
+            </div>
+            
+            <div class="form-group">
+                <label for="subject">邮件主题</label>
+                <input type="text" id="subject" placeholder="请输入邮件主题">
+            </div>
+            
+            <div class="form-group">
+                <label for="message">邮件内容</label>
+                <textarea id="message" placeholder="请输入邮件内容"></textarea>
+            </div>
+            
+            <button class="btn" id="sendBtn">发送邮件</button>
+            
+            <div id="result" class="result"></div>
+        </div>
+        
+        <div class="alternative">
+            <h3>推荐的安全替代方案</h3>
+            <p>在生产环境中，建议使用后端API来处理邮件发送：</p>
+            
+            <div class="code-block">
+// 前端代码 - 发送请求到后端API
+fetch('/api/send-email', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        to: 'recipient@example.com',
+        subject: '邮件主题',
+        message: '邮件内容'
+    })
+})
+.then(response => response.json())
+.then(data => {
+    if (data.success) {
+        alert('邮件发送成功！');
+    } else {
+        alert('邮件发送失败：' + data.error);
+    }
+});
+            </div>
+            
+            <p>后端服务（例如Node.js）可以安全地存储和使用SMTP凭据：</p>
+            
+            <div class="code-block">
+// 后端代码 - Node.js示例
+const nodemailer = require('nodemailer');
+
+app.post('/api/send-email', async (req, res) => {
+    const { to, subject, message } = req.body;
+    
+    const transporter = nodemailer.createTransport({
+        host: 'smtp.qq.com',
+        port: 587,
+        secure: false,
+        auth: {
+            user: process.env.QQ_EMAIL, // 从环境变量读取
+            pass: process.env.QQ_PASSWORD // 从环境变量读取
+        }
+    });
+    
+    try {
+        await transporter.sendMail({
+            from: process.env.QQ_EMAIL,
+            to,
+            subject,
+            text: message
+        });
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('sendBtn').addEventListener('click', function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const to = document.getElementById('to').value;
+            const subject = document.getElementById('subject').value;
+            const message = document.getElementById('message').value;
+            
+            // 验证输入
+            if (!email || !password || !to || !subject || !message) {
+                showResult('请填写所有字段', 'error');
+                return;
+            }
+            
+            // 显示发送中状态
+            const sendBtn = document.getElementById('sendBtn');
+            sendBtn.textContent = '发送中...';
+            sendBtn.disabled = true;
+            
+            // 使用SMTP.js发送邮件
+            Email.send({
+                Host: "smtp.qq.com",
+                Username: email,
+                Password: password,
+                To: to,
+                From: email,
+                Subject: subject,
+                Body: message
+            }).then(
+                message => {
+                    if (message === 'OK') {
+                        showResult('邮件发送成功！', 'success');
+                    } else {
+                        showResult('发送失败: ' + message, 'error');
+                    }
+                    sendBtn.textContent = '发送邮件';
+                    sendBtn.disabled = false;
+                }
+            ).catch(error => {
+                showResult('发送错误: ' + error, 'error');
+                sendBtn.textContent = '发送邮件';
+                sendBtn.disabled = false;
+            });
+        });
+        
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = 'result ' + type;
+            resultDiv.style.display = 'block';
+            
+            // 5秒后隐藏结果
+            setTimeout(() => {
+                resultDiv.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
