@@ -1,0 +1,168 @@
+<html xmlns="http://www.w3.org/1999/xhtml" lang="zh-CN"><head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>小米笔记复刻版（优化工具栏显示）</title>
+    
+<link rel="stylesheet" href="css/styles.css" /></head>
+<body>
+    <!-- 头部 -->
+    <div class="header">
+        <h1 id="app-title">笔记</h1>
+    </div>
+
+    <!-- 字体工具栏 -->
+    <div class="font-toolbar" id="font-toolbar">
+        <div class="font-option" data-size="14px">小</div>
+        <div class="font-option" data-size="17px">中</div>
+        <div class="font-option" data-size="20px">大</div>
+        <div class="font-option" data-size="24px">超大</div>
+        <div class="font-option custom">
+            <input type="number" id="custom-font-size" placeholder="大小" min="10" max="50" />
+            <button id="apply-custom-font">应用</button>
+        </div>
+    </div>
+
+    <!-- 子头部（搜索+保存） -->
+    <div class="sub-header">
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="搜索笔记（输入关键词匹配）" />
+            <div id="search-result" class="note-list hidden"></div>
+        </div>
+        <button id="save-btn">保存</button>
+    </div>
+
+    <!-- 两级标签区域 -->
+    <div class="parent-tab-area">
+        <div class="parent-tab-list" id="parent-tab-list">
+            <!-- 父标签动态生成 -->
+        </div>
+        <button id="add-parent-tab-btn">+ 新建小标签页</button>
+    </div>
+
+    <div class="child-tab-area">
+        <div class="child-tab-header">
+            <h3>笔记文件</h3>
+            <button id="add-child-tab-btn">+ 新建笔记文件</button>
+        </div>
+        <div class="child-tab-list" id="child-tab-list">
+            <!-- 子标签动态生成 -->
+        </div>
+    </div>
+
+    <!-- 笔记编辑区 -->
+    <div class="note-editor" id="note-editor">
+        <div id="note-content" contenteditable="true"></div>
+    </div>
+
+    <!-- 模态框 -->
+    <div class="modal hidden" id="add-parent-tab-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>新建小标签页</h3>
+                <button class="modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" class="modal-input" id="new-parent-tab-name" placeholder="输入小标签页名称（如：工作、生活）" />
+            </div>
+            <div class="modal-btn-group">
+                <button class="modal-btn cancel">取消</button>
+                <button class="modal-btn confirm">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal hidden" id="add-child-tab-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>新建笔记文件</h3>
+                <button class="modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-desc" id="current-parent-tip"></p>
+                <input type="text" class="modal-input" id="new-child-tab-name" placeholder="输入笔记文件名（如：2024工作计划）" />
+            </div>
+            <div class="modal-btn-group">
+                <button class="modal-btn cancel">取消</button>
+                <button class="modal-btn confirm">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal hidden" id="image-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="image-modal-title">添加图片链接</h3>
+                <button class="modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" class="modal-input" id="image-url" placeholder="输入图片链接（如https://pb.nichi.co/help-thank-fancy）" />
+                <select class="modal-select" id="image-type">
+                    <option value="">自动识别（默认）</option>
+                    <option value=".jpg">JPG格式</option>
+                    <option value=".png">PNG格式</option>
+                    <option value=".gif">GIF格式</option>
+                    <option value=".webp">WebP格式</option>
+                    <option value=".bin">BIN格式（特殊图片）</option>
+                </select>
+                <p class="modal-desc">提示：若链接无后缀，选择对应格式（如.bin）</p>
+
+                <div class="size-control-group" id="size-control-group">
+                    <h4 style="font-size:16px;color:#1a1a1a;margin-bottom:12px;">调整图片大小</h4>
+                    <p class="modal-desc">当前尺寸为100%，输入百分比（1%-1000%）</p>
+                    <div class="size-input-container">
+                        <input type="number" class="modal-input" id="size-percent" placeholder="输入1-1000之间的数字" min="1" max="1000" value="100" />
+                        <span class="percent-suffix">%</span>
+                    </div>
+                    <p class="size-preview" id="size-preview">预览：新尺寸 将根据输入计算（保持比例）</p>
+                </div>
+            </div>
+            <div class="modal-btn-group">
+                <button class="modal-btn cancel">取消</button>
+                <button class="modal-btn confirm">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 数据管理模态框 -->
+    <div class="modal hidden" id="data-management-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>数据管理</h3>
+                <button class="modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-desc">管理您的笔记数据：导出备份、导入数据或删除内容</p>
+                
+                <div class="data-management-options">
+                    <button class="data-management-btn export" id="export-data">导出笔记数据</button>
+                    <button class="data-management-btn import" id="import-data">导入笔记数据</button>
+                    <input type="file" id="file-input" class="file-input" accept=".json" />
+                    <button class="data-management-btn delete" id="delete-all-data">删除所有数据</button>
+                </div>
+            </div>
+            <div class="modal-btn-group">
+                <button class="modal-btn cancel">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除确认模态框 -->
+    <div class="modal hidden" id="delete-confirm-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>确认删除</h3>
+                <button class="modal-close">×</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-desc" id="delete-confirm-text">您确定要删除此项吗？此操作不可撤销。</p>
+            </div>
+            <div class="modal-btn-group">
+                <button class="modal-btn cancel">取消</button>
+                <button class="modal-btn delete" id="confirm-delete">删除</button>
+            </div>
+        </div>
+    </div>
+
+    
+
+<script src="js/scripts.js"></script></body>
