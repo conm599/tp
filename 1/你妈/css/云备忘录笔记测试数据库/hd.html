@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账号管理后台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4A90E2',
+                        secondary: '#6BBBF7',
+                        accent: '#E53E3E',
+                        neutral: '#F3F4F6',
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .gradient-bg {
+                background: linear-gradient(135deg, #E6F4FF 0%, #FFFFFF 100%);
+            }
+            .card-hover {
+                @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+            }
+            .btn-effect {
+                @apply transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98];
+            }
+            .modal-backdrop {
+                @apply fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity duration-300;
+            }
+            .modal-card {
+                @apply bg-white rounded-xl shadow-xl w-full max-w-md mx-4 transform transition-all duration-300;
+            }
+            .input-focus {
+                @apply focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all duration-200;
+            }
+        }
+    </style>
+</head>
+<body class="font-inter min-h-screen gradient-bg flex flex-col">
+    <header class="w-full py-6 px-4 md:px-8 bg-white/80 backdrop-blur-sm shadow-sm">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-[clamp(1.75rem,3vw,2.5rem)] font-bold text-gray-800">
+                    <i class="fa fa-shield mr-2 text-primary"></i>账号管理后台
+                </h1>
+                <p class="text-gray-500 mt-1">管理所有注册账号</p>
+            </div>
+            <div id="adminMenu" class="flex items-center space-x-4">
+                <span id="adminEmail" class="text-gray-700 hidden"></span>
+                <button id="logoutBtn" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors hidden">
+                    退出登录
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow w-full px-4 md:px-8 py-8">
+        <div class="max-w-6xl mx-auto" id="appContent">
+            <!-- 管理员登录界面 -->
+            <div id="loginView" class="bg-white rounded-xl shadow-md overflow-hidden p-8 md:p-10">
+                <div class="max-w-md mx-auto">
+                    <div class="text-center mb-8">
+                        <i class="fa fa-key text-6xl text-primary mb-4"></i>
+                        <h2 class="text-2xl font-bold text-gray-800">登录</h2>
+                        <p class="text-gray-500 mt-2">请使用账号登录后台系统</p>
+                    </div>
+                    
+                    <form id="adminLoginForm" class="space-y-5">
+                        <div>
+                            <label for="adminEmailInput" class="block text-sm font-medium text-gray-700 mb-1">邮箱</label>
+                            <input type="email" id="adminEmailInput" 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus"
+                                placeholder="请输入邮箱" required>
+                        </div>
+                        <div>
+                            <label for="adminPasswordInput" class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                            <input type="password" id="adminPasswordInput" 
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus"
+                                placeholder="请输入密码" required>
+                        </div>
+                        <button type="submit" 
+                            class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-2.5 px-4 rounded-lg transition-all duration-200 btn-effect">
+                            <i class="fa fa-sign-in mr-2"></i>登录管理后台
+                        </button>
+                    </form>
+                    
+                    <div id="loginError" class="mt-4 text-center text-accent hidden">
+                        <i class="fa fa-exclamation-circle mr-1"></i>
+                        <span>邮箱或密码错误，请重试</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 账号管理界面 (默认隐藏) -->
+            <div id="managementView" class="hidden">
+                <div class="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+                    <div class="p-6 md:p-8 border-b border-gray-100">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                                    <i class="fa fa-users text-primary mr-2"></i>账号管理
+                                </h2>
+                                <p class="text-gray-500 mt-1">管理所有注册用户账号</p>
+                            </div>
+                            <div class="w-full md:w-auto">
+                                <div class="relative">
+                                    <input type="text" id="searchUsers" 
+                                        class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg input-focus"
+                                        placeholder="搜索邮箱...">
+                                    <i class="fa fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 账号统计 -->
+                    <div class="p-6 border-b border-gray-100 bg-gray-50">
+                        <div class="flex flex-wrap gap-6">
+                            <div class="flex-1 min-w-[200px]">
+                                <p class="text-sm text-gray-500">总注册账号</p>
+                                <p class="text-2xl font-bold text-gray-800" id="totalAccounts">0</p>
+                            </div>
+                            <div class="flex-1 min-w-[200px]">
+                                <p class="text-sm text-gray-500">今日新增</p>
+                                <p class="text-2xl font-bold text-green-500" id="todayNewAccounts">0</p>
+                            </div>
+                            <div class="flex-1 min-w-[200px]">
+                                <p class="text-sm text-gray-500">本月新增</p>
+                                <p class="text-2xl font-bold text-primary" id="monthNewAccounts">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 账号列表 -->
+                    <div class="p-6">
+                        <div id="usersList" class="space-y-4 max-h-[calc(100vh-400px)] overflow-y-auto pr-2">
+                            <!-- 账号项会通过JavaScript动态添加 -->
+                            <div class="text-center text-gray-400 py-10" id="emptyUsersList">
+                                <i class="fa fa-user-o text-4xl mb-3 block"></i>
+                                <p>暂无注册账号</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="w-full py-4 px-4 md:px-8 bg-white/80 backdrop-blur-sm shadow-inner">
+        <div class="max-w-6xl mx-auto text-center text-sm text-gray-500">
+            <p>© 2025 账号管理后台 | naxid谨慎处理</p>
+        </div>
+    </footer>
+
+    <!-- 注销账号模态框 -->
+    <div id="deleteAccountModal" class="modal-backdrop opacity-0 pointer-events-none">
+        <div class="modal-card scale-95">
+            <div class="p-6 md:p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">注销账号</h2>
+                    <button id="closeDeleteModal" class="text-gray-400 hover:text-gray-600">
+                        <i class="fa fa-times text-xl"></i>
+                    </button>
+                </div>
+                <p class="text-gray-600 mb-6">您正在注销账号: <span id="deleteAccountEmail" class="font-medium"></span></p>
+                
+                <form id="deleteAccountForm" class="space-y-4">
+                    <input type="hidden" id="deleteAccountId">
+                    
+                    <div>
+                        <label for="accountPassword" class="block text-sm font-medium text-gray-700 mb-1">
+                            账号密码 <span class="text-xs text-gray-500">(或输入强制注销代码)</span>
+                        </label>
+                        <input type="password" id="accountPassword" 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg input-focus"
+                            placeholder="输入账号密码或强制注销代码" required>
+                    </div>
+                    
+                    <div class="bg-amber-50 p-3 rounded-lg border border-amber-100 text-sm">
+                        <i class="fa fa-info-circle text-amber-500 mr-1"></i>
+                        <span>强制注销代码为: <code class="bg-gray-100 px-1 py-0.5 rounded">你的密码</code></span>
+                    </div>
+                    
+                    <button type="submit" 
+                        class="w-full bg-accent hover:bg-accent/90 text-white font-medium py-2.5 px-4 rounded-lg transition-all duration-200 btn-effect">
+                        <i class="fa fa-trash mr-2"></i>确认注销账号
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 操作结果提示 -->
+    <div id="notification" class="fixed top-4 right-4 px-4 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300 hidden">
+        <div class="flex items-center">
+            <i id="notificationIcon" class="mr-3 text-xl"></i>
+            <span id="notificationMessage"></span>
+        </div>
+    </div>
+
+    <script>
+        // 加密工具类（与用户端保持一致）
+        class CryptoUtil {
+            static hash(str) {
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    const char = str.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash; // 转换为32位整数
+                }
+                return Math.abs(hash).toString(16);
+            }
+        }
+
+        // 数据库客户端（修复：不使用first操作，改用all并取第一条记录）
+        class D1AdminClient {
+            constructor() {
+                this.apiUrl = 'https://00.naxid.top/'; // 使用相同端口
+                this.adminId = null;
+            }
+
+            setAdminId(adminId) {
+                this.adminId = adminId;
+            }
+
+            // 管理员登录
+            async adminLogin(email, password) {
+                const hashedPassword = CryptoUtil.hash(password);
+                
+                try {
+                    // 修复：使用all操作并限制1条记录，然后取第一条
+                    const results = await this.queryAll(
+                        'SELECT \`id\`, \`email\` FROM users WHERE \`email\` = ? AND \`password\` = ? LIMIT 1',
+                        [email, hashedPassword]
+                    );
+                    
+                    const result = results.length > 0 ? results[0] : null;
+                    
+                    if (!result) {
+                        throw new Error('管理员邮箱或密码错误');
+                    }
+                    
+                    return { success: true, adminId: result.id, email: result.email };
+                } catch (error) {
+                    console.error('管理员登录失败:', error);
+                    throw error;
+                }
+            }
+
+            // 获取所有用户账号
+            async getAllUsers() {
+                if (!this.adminId) {
+                    throw new Error('未登录或管理员ID未设置');
+                }
+                
+                try {
+                    const users = await this.queryAll(
+                        'SELECT \`id\`, \`email\`, \`created_at\`, \`updated_at\` FROM users ORDER BY \`created_at\` DESC'
+                    );
+                    
+                    return users.map(user => ({
+                        id: user.id,
+                        email: user.email,
+                        createdAt: user.created_at,
+                        updatedAt: user.updated_at
+                    }));
+                } catch (error) {
+                    console.error('获取用户列表失败:', error);
+                    throw error;
+                }
+            }
+
+            // 验证用户密码
+            async verifyUserPassword(userId, password) {
+                const hashedPassword = CryptoUtil.hash(password);
+                
+                try {
+                    // 修复：使用all操作并限制1条记录，然后取第一条
+                    const results = await this.queryAll(
+                        'SELECT \`id\` FROM users WHERE \`id\` = ? AND \`password\` = ? LIMIT 1',
+                        [userId, hashedPassword]
+                    );
+                    
+                    return results.length > 0; // 如果找到用户则返回true
+                } catch (error) {
+                    console.error('验证用户密码失败:', error);
+                    throw error;
+                }
+            }
+
+            // 删除用户账号（包括其所有任务）
+            async deleteUserAccount(userId) {
+                if (!this.adminId) {
+                    throw new Error('未登录或管理员ID未设置');
+                }
+                
+                try {
+                    // 先删除用户的所有任务
+                    await this.execute(
+                        'DELETE FROM tasks WHERE \`user_id\` = ?',
+                        [userId]
+                    );
+                    
+                    // 再删除用户账号
+                    await this.execute(
+                        'DELETE FROM users WHERE \`id\` = ?',
+                        [userId]
+                    );
+                    
+                    return true;
+                } catch (error) {
+                    console.error('删除用户账号失败:', error);
+                    throw error;
+                }
+            }
+
+            // 执行SQL语句
+            async execute(sql, params = []) {
+                return this._request('exec', sql, params);
+            }
+
+            // 查询多条记录
+            async queryAll(sql, params = []) {
+                const result = await this._request('all', sql, params);
+                return result.results || [];
+            }
+
+            // 与服务器通信
+            async _request(action, sql, params) {
+                try {
+                    const requestBody = {
+                        action: action,
+                        query: sql,
+                        params: params
+                    };
+                    
+                    const response = await fetch(this.apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(requestBody)
+                    });
+
+                    const responseText = await response.text();
+                    let data;
+                    try {
+                        data = JSON.parse(responseText);
+                    } catch (e) {
+                        throw new Error(`服务器返回无效JSON: ${responseText}`);
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(`服务器错误: ${response.status} - ${data.error || response.statusText}`);
+                    }
+
+                    if (!data.success) {
+                        throw new Error(data.error || '操作失败');
+                    }
+
+                    return data.data;
+                } catch (error) {
+                    console.error(`[D1Admin] ${action} 失败:`, error);
+                    throw error;
+                }
+            }
+        }
+
+        // 模态框管理器
+        class ModalManager {
+            constructor() {
+                this.deleteModal = document.getElementById('deleteAccountModal');
+                this.closeDeleteModal = document.getElementById('closeDeleteModal');
+                this.deleteForm = document.getElementById('deleteAccountForm');
+                
+                this.bindEvents();
+            }
+
+            bindEvents() {
+                // 关闭模态框
+                this.closeDeleteModal.addEventListener('click', () => this.close());
+                
+                // 点击背景关闭
+                this.deleteModal.addEventListener('click', (e) => {
+                    if (e.target === this.deleteModal) this.close();
+                });
+            }
+
+            open(userId, email) {
+                // 填充数据
+                document.getElementById('deleteAccountId').value = userId;
+                document.getElementById('deleteAccountEmail').textContent = email;
+                document.getElementById('accountPassword').value = '';
+                
+                // 显示模态框
+                this.deleteModal.classList.remove('opacity-0', 'pointer-events-none');
+                this.deleteModal.querySelector('.modal-card').classList.remove('scale-95');
+                this.deleteModal.querySelector('.modal-card').classList.add('scale-100');
+                document.getElementById('accountPassword').focus();
+                
+                // 阻止页面滚动
+                document.body.style.overflow = 'hidden';
+            }
+
+            close() {
+                this.deleteModal.classList.add('opacity-0', 'pointer-events-none');
+                this.deleteModal.querySelector('.modal-card').classList.remove('scale-100');
+                this.deleteModal.querySelector('.modal-card').classList.add('scale-95');
+                
+                // 恢复页面滚动
+                document.body.style.overflow = '';
+            }
+        }
+
+        // 账号管理应用
+        class AdminApp {
+            constructor() {
+                this.d1Client = new D1AdminClient();
+                this.modalManager = new ModalManager();
+                this.users = [];
+                this.currentAdmin = null;
+                this.refreshInterval = null;
+                
+                this.cacheDomElements();
+                this.bindEvents();
+                this.checkStoredLogin();
+            }
+
+            cacheDomElements() {
+                // 视图元素
+                this.loginView = document.getElementById('loginView');
+                this.managementView = document.getElementById('managementView');
+                
+                // 登录表单
+                this.adminLoginForm = document.getElementById('adminLoginForm');
+                this.adminEmailInput = document.getElementById('adminEmailInput');
+                this.adminPasswordInput = document.getElementById('adminPasswordInput');
+                this.loginError = document.getElementById('loginError');
+                
+                // 管理界面元素
+                this.adminEmail = document.getElementById('adminEmail');
+                this.logoutBtn = document.getElementById('logoutBtn');
+                this.searchUsers = document.getElementById('searchUsers');
+                this.usersList = document.getElementById('usersList');
+                this.emptyUsersList = document.getElementById('emptyUsersList');
+                this.totalAccounts = document.getElementById('totalAccounts');
+                this.todayNewAccounts = document.getElementById('todayNewAccounts');
+                this.monthNewAccounts = document.getElementById('monthNewAccounts');
+                
+                // 注销表单
+                this.deleteAccountForm = document.getElementById('deleteAccountForm');
+                
+                // 通知元素
+                this.notification = document.getElementById('notification');
+                this.notificationIcon = document.getElementById('notificationIcon');
+                this.notificationMessage = document.getElementById('notificationMessage');
+            }
+
+            bindEvents() {
+                // 管理员登录
+                this.adminLoginForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await this.handleAdminLogin();
+                });
+                
+                // 管理员登出
+                this.logoutBtn.addEventListener('click', () => this.logout());
+                
+                // 搜索用户
+                this.searchUsers.addEventListener('input', () => this.filterUsers());
+                
+                // 注销账号
+                this.deleteAccountForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await this.handleDeleteAccount();
+                });
+            }
+
+            // 检查本地存储的登录状态
+            checkStoredLogin() {
+                const storedAdmin = localStorage.getItem('adminAccount');
+                if (storedAdmin) {
+                    try {
+                        const admin = JSON.parse(storedAdmin);
+                        this.loginSuccess(admin.adminId, admin.email);
+                    } catch (error) {
+                        console.error('解析存储的管理员信息失败:', error);
+                        localStorage.removeItem('adminAccount');
+                    }
+                }
+            }
+
+            // 处理管理员登录
+            async handleAdminLogin() {
+                const email = this.adminEmailInput.value.trim();
+                const password = this.adminPasswordInput.value;
+                
+                try {
+                    this.showNotification('正在登录...', false, false);
+                    const result = await this.d1Client.adminLogin(email, password);
+                    
+                    if (result.success) {
+                        this.loginSuccess(result.adminId, email);
+                        this.adminLoginForm.reset();
+                        this.loginError.classList.add('hidden');
+                        this.showNotification('登录成功', false);
+                    }
+                } catch (error) {
+                    this.showNotification(`登录失败: ${error.message}`, true);
+                    this.loginError.classList.remove('hidden');
+                    console.error('登录失败:', error);
+                }
+            }
+
+            // 登录成功处理
+            loginSuccess(adminId, email) {
+                // 保存管理员信息
+                this.currentAdmin = { adminId, email };
+                this.d1Client.setAdminId(adminId);
+                
+                // 本地存储
+                localStorage.setItem('adminAccount', JSON.stringify({ adminId, email }));
+                
+                // 更新UI
+                this.switchView('management');
+                this.adminEmail.textContent = email;
+                this.adminEmail.classList.remove('hidden');
+                this.logoutBtn.classList.remove('hidden');
+                
+                // 加载用户列表
+                this.loadUsers();
+                
+                // 设置自动刷新
+                this.startAutoRefresh();
+            }
+
+            // 登出处理
+            logout() {
+                if (confirm('确定要退出管理员后台吗？')) {
+                    // 清除状态
+                    this.currentAdmin = null;
+                    this.d1Client.setAdminId(null);
+                    this.users = [];
+                    
+                    // 清除本地存储
+                    localStorage.removeItem('adminAccount');
+                    
+                    // 停止自动刷新
+                    this.stopAutoRefresh();
+                    
+                    // 更新UI
+                    this.switchView('login');
+                    this.renderUsers();
+                }
+            }
+
+            // 切换视图
+            switchView(viewName) {
+                if (viewName === 'login') {
+                    this.loginView.classList.remove('hidden');
+                    this.managementView.classList.add('hidden');
+                } else if (viewName === 'management') {
+                    this.loginView.classList.add('hidden');
+                    this.managementView.classList.remove('hidden');
+                }
+            }
+
+            // 加载用户列表
+            async loadUsers() {
+                try {
+                    this.showNotification('正在加载用户列表...', false, false);
+                    const users = await this.d1Client.getAllUsers();
+                    this.users = users;
+                    this.renderUsers();
+                    this.updateUserStats();
+                    this.showNotification(`已加载 ${users.length} 个用户`, false);
+                } catch (error) {
+                    this.showNotification(`加载失败: ${error.message}`, true);
+                    console.error('加载用户失败:', error);
+                }
+            }
+
+            // 过滤用户
+            filterUsers() {
+                const searchTerm = this.searchUsers.value.toLowerCase().trim();
+                
+                if (!searchTerm) {
+                    this.renderUsers();
+                    return;
+                }
+                
+                const filteredUsers = this.users.filter(user => 
+                    user.email.toLowerCase().includes(searchTerm)
+                );
+                
+                this.renderUsers(filteredUsers);
+            }
+
+            // 渲染用户列表
+            renderUsers(usersToRender = null) {
+                const users = usersToRender || this.users;
+                
+                // 清空列表
+                this.usersList.innerHTML = '';
+                
+                // 显示空状态
+                if (users.length === 0) {
+                    this.usersList.appendChild(this.emptyUsersList);
+                    return;
+                }
+                
+                // 渲染用户项
+                users.forEach(user => {
+                    const userElement = document.createElement('div');
+                    userElement.className = 'bg-white rounded-lg shadow-sm p-4 border-l-4 border-primary card-hover';
+                    
+                    userElement.innerHTML = `
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+                            <div>
+                                <div class="flex items-center">
+                                    <i class="fa fa-user-circle text-primary mr-2"></i>
+                                    <h3 class="font-medium text-gray-800">${user.email}</h3>
+                                </div>
+                                <div class="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-500">
+                                    <span class="flex items-center">
+                                        <i class="fa fa-calendar-plus-o mr-1 text-gray-400"></i>
+                                        注册: ${this.formatDate(user.createdAt)}
+                                    </span>
+                                    <span class="flex items-center">
+                                        <i class="fa fa-calendar-check-o mr-1 text-gray-400"></i>
+                                        最后更新: ${this.formatDate(user.updatedAt)}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="mt-4 md:mt-0">
+                                <button onclick="adminApp.showDeleteModal('${user.id}', '${user.email}')" 
+                                    class="px-4 py-2 bg-accent hover:bg-accent/90 text-white rounded-lg transition-colors btn-effect">
+                                    <i class="fa fa-trash mr-1"></i> 注销账号
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    
+                    this.usersList.appendChild(userElement);
+                });
+            }
+
+            // 显示注销账号模态框
+            showDeleteModal(userId, email) {
+                this.modalManager.open(userId, email);
+            }
+
+            // 处理账号注销
+            async handleDeleteAccount() {
+                const userId = document.getElementById('deleteAccountId').value;
+                const email = document.getElementById('deleteAccountEmail').textContent;
+                const password = document.getElementById('accountPassword').value;
+                
+                // 验证输入
+                if (!password) {
+                    this.showNotification('请输入密码或强制注销代码', true);
+                    return;
+                }
+                
+                try {
+                    this.showNotification('正在处理注销...', false, false);
+                    
+                    // 验证密码或强制代码
+                    let isAuthorized = false;
+                    
+                    // 检查是否是强制注销代码
+                    if (password === 'naxida') {
+                        isAuthorized = true;
+                    } else {
+                        // 验证用户密码
+                        isAuthorized = await this.d1Client.verifyUserPassword(userId, password);
+                    }
+                    
+                    if (!isAuthorized) {
+                        throw new Error('密码错误或代码不正确，无法注销');
+                    }
+                    
+                    // 执行注销
+                    await this.d1Client.deleteUserAccount(userId);
+                    
+                    // 更新UI
+                    this.modalManager.close();
+                    this.users = this.users.filter(user => user.id !== userId);
+                    this.renderUsers();
+                    this.updateUserStats();
+                    
+                    this.showNotification(`账号 ${email} 已成功注销`, false);
+                } catch (error) {
+                    this.showNotification(`注销失败: ${error.message}`, true);
+                    console.error('注销账号失败:', error);
+                }
+            }
+
+            // 更新用户统计
+            updateUserStats() {
+                // 总注册账号
+                this.totalAccounts.textContent = this.users.length;
+                
+                // 今日新增
+                const today = new Date().toISOString().split('T')[0];
+                const todayCount = this.users.filter(user => 
+                    user.createdAt.split('T')[0] === today
+                ).length;
+                this.todayNewAccounts.textContent = todayCount;
+                
+                // 本月新增
+                const [currentYear, currentMonth] = new Date().toISOString().split('T')[0].split('-').slice(0, 2);
+                const monthCount = this.users.filter(user => {
+                    const [year, month] = user.createdAt.split('T')[0].split('-').slice(0, 2);
+                    return year === currentYear && month === currentMonth;
+                }).length;
+                this.monthNewAccounts.textContent = monthCount;
+            }
+
+            // 格式化日期显示
+            formatDate(dateString) {
+                if (!dateString) return '未知';
+                const date = new Date(dateString);
+                return date.toLocaleString('zh-CN', { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
+            // 显示通知
+            showNotification(message, isError = false, autoHide = true) {
+                this.notificationMessage.textContent = message;
+                this.notification.classList.remove('hidden', 'bg-green-500', 'bg-accent');
+                
+                if (isError) {
+                    this.notification.classList.add('bg-accent');
+                    this.notificationIcon.className = 'fa fa-exclamation-circle mr-3 text-xl text-white';
+                } else {
+                    this.notification.classList.add('bg-green-500');
+                    this.notificationIcon.className = 'fa fa-check-circle mr-3 text-xl text-white';
+                }
+                
+                // 显示通知
+                this.notification.classList.remove('translate-x-full');
+                
+                // 自动隐藏
+                if (autoHide) {
+                    setTimeout(() => this.hideNotification(), 3000);
+                }
+            }
+
+            // 隐藏通知
+            hideNotification() {
+                this.notification.classList.add('translate-x-full');
+            }
+
+            // 启动自动刷新
+            startAutoRefresh() {
+                this.stopAutoRefresh();
+                // 每30秒自动刷新一次用户列表
+                this.refreshInterval = setInterval(() => this.loadUsers(), 30000);
+            }
+
+            // 停止自动刷新
+            stopAutoRefresh() {
+                if (this.refreshInterval) {
+                    clearInterval(this.refreshInterval);
+                    this.refreshInterval = null;
+                }
+            }
+        }
+
+        // 全局应用实例
+        let adminApp;
+        window.onload = () => {
+            adminApp = new AdminApp();
+        };
+    </script>
+</body>
+</html>
+    
