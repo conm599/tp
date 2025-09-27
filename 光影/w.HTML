@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>3D推箱子游戏</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <!-- 替换为国内镜像源 -->
+  <script src="https://cdn.staticfile.org/three.js/0.155.0/three.min.js"></script>
+  <script>
+    // === 初始化场景 ===
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 100);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // === 光源 ===
+    const light = new THREE.AmbientLight(0xffffff, 1);
+    scene.add(light);
+
+    // === 地面 ===
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(100, 100),
+      new THREE.MeshStandardMaterial({ color: 0x888888 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    scene.add(ground);
+
+    // === 玩家、箱子、目标点 ===
+    const player = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ color: 0x00ffff })
+    );
+    scene.add(player);
+
+    const boxes = [];
+    const targets = [];
+
+    // === 关卡设计 ===
+    const level = [
+      "#####",
+      "#   #",
+      "# $@#",
+      "#####"
+    ];
+    // # = 墙壁, $ = 箱子, @ = 玩家, . = 目标点
+
+    // 解析关卡并生成模型
+    function parseLevel(level) {
+      const wallColor = 0xff0000;
+      const targetColor = 0xffff00;
+      const boxColor = 0x00ff00;
+
+      for (let y = 0; y < level.length; y++) {
+        for (let x = 0; x < level[y].length; x++) {
+          const char = level[y][x];
+          const pos = new THREE.Vector3(x, 0, -y);
+          switch (char) {
+            case "#":
+              const wall = new THREE.Mesh(
+                new THREE.BoxGeometry(1, 1, 1),
+                new THREE.MeshStandardMaterial({ color: wallColor })
+              );
+              wall.position.copy(pos);
+              scene.add(wall);
+              break;
+            case "$":
+              const box = new THREE.Mesh(
+                new THREE.BoxGeometry(1, 1, 1),
+                new THREE.MeshStandardMaterial({ color: boxColor })
+              );
+              box.position.copy(pos);
+              scene.add(box);
+              boxes.push(box);
+              break;
+            case "@":
+              player.position.copy(pos);
+              break;
+            case ".":
+              const target = new THREE.Mesh(
+                new THREE.CircleGeometry(0.4, 32),
+                new THREE.MeshStandardMaterial({ color: targetColor })
+              );
+              target.position.copy(pos);
+              target.rotation.x = -Math.PI / 2;
+              scene.add(target);
+              targets.push(target);
+              break;
+          }
+        }
+      }
+    }
+
+    parseLevel(level);
+
+    // === 相机位置 ===
+    camera.position.set(2, 5, 5);
+    camera.lookAt(0, 0, 0);
+
+    // === 触摸控制 ===
+    let touchStart = null;
+    let touchEnd = null;
+    let isMoving = false;
+
+    document.addEventListener("touchstart", (e) => {
+      if (isMoving) return;
+      touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    });
+
+    document.addEventListener("touchend", (e) => {
+      if (!touchStart) return;
+      touchEnd = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+      handleTouch();
+      touchStart = null;
+      touchEnd = null;
+    });
+
+    function handleTouch() {
+      const dx = touchEnd.x - touchStart.x;
+      const dy = touchEnd.y - touchStart.y;
+      const direction = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "up" : "down");
+      movePlayer(direction);
+    }
+
+    // === 移动逻辑 ===
+    const directions = {
+      up: new THREE.Vector3(0, 0, -1),
+      down: new THREE.Vector3(0, 0, 1),
+      left: new THREE.Vector3(-1, 0, 0),
+      right: new THREE.Vector3(1, 0, 0)
+    };
+
+    function movePlayer(dir) {
+      const step = directions[dir];
+      const nextPos = player.position.clone().add(step);
+      const box = boxes.find(b => b.position.equals(nextPos));
+
+      // 检查前方是否为墙或箱子（非目标点）
+      const isWall = scene.children.some(c => 
+        c.type === "Mesh" && c.material.color.getHex() === 0xff0000 && c.position.equals(nextPos)
+      );
+      if (isWall) return;
+
+      if (box) {
+        const boxNextPos = nextPos.clone().add(step);
+        const boxIsWall = scene.children.some(c => 
+          c.type === "Mesh" && c.material.color.getHex() === 0xff0000 && c.position.equals(boxNextPos)
+        );
+        if (boxIsWall) return;
+        if (boxes.some(b => b.position.equals(boxNextPos))) return;
+        box.position.copy(boxNextPos);
+      }
+
+      player.position.copy(nextPos);
+      checkWin();
+      isMoving = true;
+      setTimeout(() => isMoving = false, 300);
+    }
+
+    // === 胜利判断 ===
+    function checkWin() {
+      const allBoxesOnTarget = boxes.every(box => {
+        return targets.some(target => box.position.distanceTo(target.position) < 0.5);
+      });
+      if (allBoxesOnTarget) {
+        alert("恭喜！你通关了！");
+        location.reload(); // 重置游戏
+      }
+    }
+
+    // === 渲染循环 ===
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // === 响应窗口大小变化 ===
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
