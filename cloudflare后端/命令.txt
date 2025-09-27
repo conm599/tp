@@ -1,3 +1,0 @@
-部署命令:npm install -g wrangler
-版本命令:npx wrangler versions upload
-npx wrangler deploy
